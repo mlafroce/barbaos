@@ -1,0 +1,11 @@
+# Archivos de compilación de rust
+/target
+
+# Imagen de disco rígido
+hdd.dsk
+
+# Cache de pytest
+test/__pycache__
+
+# IDE
+.idea
