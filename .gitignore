@@ -2,10 +2,10 @@
 /target
 
 # Imagen de disco rígido
-hdd.dsk
+hdd.img
 
 # Cache de pytest
-test/__pycache__
+python/__pycache__
 
 # IDE
 .idea

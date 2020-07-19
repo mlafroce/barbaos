@@ -17,3 +17,19 @@ Instalarlos con los comandos
 ~~~{.bash}
 pip3 install pytest pygdbmi
 ~~~
+
+## Ejecución
+
+Ejecutar los test con
+
+```bash
+pytest
+```
+
+Se recomienda usar `flake8` para verificar reglas de linter.
+
+# Debugger
+
+* Ejecutar SO en una terminal: `cargo run -- -s -S`
+
+* Ejecutar `riscv64-unknown-elf-gdb target/riscv64gc-unknown-none-elf/debug/barbaos`, y conectar al proceso lanzado con el comando `target remote :1234`.
