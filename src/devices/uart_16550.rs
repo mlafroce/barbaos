@@ -37,7 +37,7 @@ impl Uart {
     }
 
     #[allow(dead_code)]
-    fn get_char(&self) -> Option<u8> {
+    pub fn get_char(&self) -> Option<u8> {
         let ptr = self.base_address as *mut u8;
         unsafe {
             // El bit 5 es el Line Control Register, y nos indica si leyó algo o no.
