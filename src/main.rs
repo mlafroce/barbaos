@@ -15,9 +15,12 @@
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+
 mod assembly;
 mod devices;
 mod handlers;
+mod mmu;
+
 mod test;
 
 use devices::uart::Uart;
@@ -34,4 +37,5 @@ fn kmain() {
     #[cfg(test)]
     test_main();
     println!("Hello Rust!");
+    mmu::print_mem_info();
 }

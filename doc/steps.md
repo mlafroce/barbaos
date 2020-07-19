@@ -10,6 +10,7 @@ Este OS no pretende ser un *copy paste* del ya implementado por Stephen (Que por
 
 ¿Por qué Rust? Porque Rust es un lenguaje moderno, que le pone énfasis a la seguridad de memoria, concurrencia, etc. Tiene un compilador muy, muy bueno, y una muy buena comunidad.
 
+
 ## Armando el entorno
 
 Lo primero que tenemos que hacer es descargar un toolchain para RISC-V.
@@ -43,6 +44,7 @@ Para ejecutar los tests, utilizamos *pytest* y *pygdbmi*. Instalar con el siguie
 ~~~{.bash}
 pip3 install pytest pygdbmi
 ~~~
+
 
 ## Kernel vacío
 
@@ -91,3 +93,10 @@ Al declarar nuestro *runner*, se creará automáticamente una función "`main`" 
 Una vez configurados los wrappers de nuestras pruebas, hacemos una llamada al *harness* desde nuestro `kmain`.
 
 Por el momento esto nos puede ayudar a ejecutar tests sencillos, aunque deberá ser remodelado cuando se separe el modo máquina del modo supervisor / usuario.
+
+
+## Paginas de memoria
+
+Exportamos direcciones de memoria con el script del linkeditor y luego usamos un snippet en assembly para guardar esas direcciones en variables globales. Luego definiremos un tamaño de página de memoria standard, de 4kb, y luego, conociendo la dirección del heap y su tamaño, procedemos a dividir el heap en páginas.
+
+Utilizamos el dispositivo UART para imprimir las direcciones de memoria que identificamos.

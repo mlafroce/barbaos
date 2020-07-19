@@ -26,7 +26,8 @@ _start:
   bltu    a0, a1, 1b // mientras BSS.start != BSS.end repito
 2:
   // Cargo dirección del kernel stack (ver virt.lds)
-  la      sp, _stack
+  // El stack crece de arriba hacia abajo, por eso cargo el final
+  la      sp, _stack_end
   // Configuramos mstatus: https://ibex-core.readthedocs.io/en/latest/cs_registers.html#machine-status-mstatus
   // Bits 12:11 -> MPP, machine previous privilege. 11 para modo M
   // Bit 7 -> MPIE, interrupciones de máquina previamente habilitadas
