@@ -1,8 +1,10 @@
 //! # Módulo de MMU (Memory management unit)
 //!
 //! Por el momento sólo implementamos la parte de paginación
-use core::sync::atomic::{AtomicUsize, Ordering};
 use crate::{print, println};
+use core::sync::atomic::{AtomicUsize, Ordering};
+
+pub mod riscv64;
 
 extern "C" {
     static TEXT_START: usize;
@@ -38,6 +40,9 @@ pub fn print_mem_info() {
         );
         println!("Kernel stack end:   \x1b[1m{:#x}\x1b[0m", KERNEL_STACK_END);
         println!("Heap start:         \x1b[1m{:#x}\x1b[0m", HEAP_START);
-        println!("Heap size:          \x1b[1m{:#x}\x1b[0m bytes", HEAP_SIZE.load(Ordering::Relaxed));
+        println!(
+            "Heap size:          \x1b[1m{:#x}\x1b[0m bytes",
+            HEAP_SIZE.load(Ordering::Relaxed)
+        );
     }
 }
