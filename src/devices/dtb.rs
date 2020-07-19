@@ -2,6 +2,7 @@ use crate::utils::error::OsError;
 use crate::utils::NullTerminatedStr;
 use crate::{print, println};
 use core::mem::size_of;
+use core::ptr::copy_nonoverlapping;
 
 const FDT_BEGIN_NODE: u8 = 1;
 const FDT_END_NODE: u8 = 2;
@@ -143,6 +144,28 @@ impl DtbReader {
             let prop = unsafe { NullTerminatedStr::as_str(prop) };
             println!("{}: {}", display, prop)
         }
+    }
+
+    // Data[1] tiene el inicio de la memoria, data[3] el tamaño (O serán 2 enteros de 64 bits?)
+    pub fn get_memory_info(&self) -> [usize; 2] {
+        let mut res = [0; 2];
+        let node_iterator = NodeIterator::new(self);
+        if let Some(FdtNode::PropNode(_, data, size)) = node_iterator
+            .skip_while(|node| {
+                // TODO? Cheating a bit...
+                !node.starts_with("memory@")
+            })
+            .find(|node| node.has_prop_or_label("reg"))
+        {
+            unsafe {
+                copy_nonoverlapping(
+                    data as *const usize,
+                    res.as_mut_ptr(),
+                    size / size_of::<usize>(),
+                )
+            };
+        }
+        res
     }
 }
 

@@ -13,8 +13,10 @@
 
 mod assembly;
 mod devices;
+mod mmu;
 mod utils;
 
+use crate::mmu::{HEAP_SIZE, HEAP_START};
 use core::ptr::null;
 use devices::dtb::DtbReader;
 use devices::shutdown;
@@ -34,5 +36,9 @@ extern "C" fn kmain() {
     let dtb_address = unsafe { DTB_ADDRESS };
     let dtb = DtbReader::new(dtb_address).unwrap();
     dtb.print_boot_info();
+    let mem_data = dtb.get_memory_info();
+    let heap_end = mem_data[0].to_be() + mem_data[1].to_be();
+    unsafe { HEAP_SIZE = heap_end - HEAP_START };
+    mmu::print_mem_info();
     shutdown();
 }
