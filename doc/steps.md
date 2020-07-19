@@ -13,6 +13,7 @@ En paralelo se intentará desarrollar las mismas funcionalidades para Raspberry 
 
 ¿Por qué Rust? Porque Rust es un lenguaje de bajo nivel, moderno, que le pone énfasis a la seguridad de memoria, concurrencia, etc. Tiene un compilador muy, muy bueno, y una muy buena comunidad.
 
+
 ## Armando el entorno
 
 Lo primero que tenemos que hacer es descargar un toolchain para RISC-V.
@@ -46,6 +47,7 @@ Para ejecutar los tests, utilizamos *pytest* y *pygdbmi*. Instalar con el siguie
 ~~~{.bash}
 pip3 install pytest pygdbmi
 ~~~
+
 
 ## Kernel vacío
 
@@ -130,3 +132,9 @@ Por el momento esto nos puede ayudar a ejecutar tests sencillos, aunque deberá 
 ## Recorrido del DTB
 
 Agregamos en el arranque un parseo básico del *device tree*, con el que imprimimos información básica del CPU y memoria ram.
+
+## Paginas de memoria
+
+Exportamos direcciones de memoria con el script del linkeditor y luego usamos un snippet en assembly para guardar esas direcciones en variables globales. Luego definiremos un tamaño de página de memoria standard, de 4kb, y luego, conociendo la dirección del heap y su tamaño, procedemos a dividir el heap en páginas.
+
+Utilizamos el dispositivo UART para imprimir las direcciones de memoria que identificamos.

@@ -10,6 +10,7 @@ use core::arch::{asm, global_asm};
 // import a full assembly file, which is what I want here.
 global_asm!(include_str!("../asm/riscv/boot.S"));
 global_asm!(include_str!("../asm/riscv/trap.S"));
+global_asm!(include_str!("../asm/riscv/mem.S"));
 
 /// # Safety
 /// The 'mstatus' register is accessible exclusively in machine mode.
