@@ -1,10 +1,11 @@
 from pygdbmi.gdbcontroller import GdbController
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 import pytest
 
 DEBUGGER = "gdb-multiarch"
 KERNEL = "target/riscv64gc-unknown-none-elf/debug/barbaos"
+
 
 QEMU_COMMAND = ["qemu-system-riscv64",
                 "-machine", "virt",
@@ -16,28 +17,34 @@ QEMU_COMMAND = ["qemu-system-riscv64",
                 "-kernel", KERNEL,
                 "-s", "-S"]
 
-"""
-Lanza una instancia de qemu en un proceso aparte
-"""
+
 @pytest.fixture
 def qemu_process():
-    process = Popen(QEMU_COMMAND)
-    yield process
-    process.kill()
+    """
+    Lanza una instancia de qemu en un proceso aparte
+    """
+    process = Popen(QEMU_COMMAND, stdout=PIPE)
+    return process
 
-"""
-El 
-"""
-def test_kill(qemu_process):
-    gdbmi = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
 
-    gdbmi.write("target remote :1234")
-    gdbmi.write("k")
+@pytest.fixture
+def gdbmi():
+    """
+    Inicializa el controlador de gdb
+    """
+    controller = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
+    controller.write("target remote :1234")
+    return controller
 
-def test_should_timeout(qemu_process):
-    gdbmi = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
 
-    gdbmi.write("target remote :1234")
-    response = gdbmi.write("c")
-    with pytest.raises(Exception):
-        response = gdbmi.write("c")
+def test_hello(qemu_process, gdbmi):
+    """
+    Test impresion hello world
+    """
+    gdbmi.write("c")
+    output = qemu_process.stdout.readline().strip()
+    assert output == b"Hello Rust!"
+
+
+if __name__ == "__main__":
+    print("run `$ pytest`")

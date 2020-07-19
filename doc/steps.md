@@ -74,3 +74,44 @@ El primer "-s" es para que se levante un servidor de gdb en el puerto :1234, el 
 ### Tests
 
 Con este kernel vacío lo único que podemos hacer es ejecutarlo. Escribimos un test para probar que podemos levantar una instancia de QEmu y matarla.
+
+
+## Device tree
+
+RISC-V, al igual que otras arquitecturas de embebidos, utiliza un **Device tree** para brindarle al sistema información sobre el hardware presente.
+Esta información de los dispositivos emulados es muy similar al *ACPI* en arquitecturas x86.
+
+El *device tree* se carga en memoria en un formato binario, que podemos guardar en disco utilizando el siguiente comando:
+
+```bash 
+qemu-system-riscv64 -machine virt,dumpdtb=qemu-riscv64-virt.dtb
+```
+
+Para convertirlo a texto plano usamos el comando `dtc` y escribimos la salida en un archivo *.dts*
+
+```bash
+dtc qemu-riscv64-virt.dtb > qemu-riscv64-virt.dts
+```
+
+Cuando inspeccionamos este archivo podemos ver muchos datos interesantes, como por ejemplo, ubicación y tamaño de la memoria, cantidad de CPUs, dispositivos conectados y compatibilidad de los mismos.
+En particular, el que más nos va a interesar para iniciar es el dispositivo UART, que vemos que es compatible con el modelo "ns16550a".
+
+El dispositivo UART es un *puerto serie* con el que vamos a imprimir por pantalla. 
+
+Si leemos el código fuente del bootloader [OpenSBI](https://github.com/riscv-software-src/opensbi/blob/master/docs/firmware/fw.md), podemos ver que al iniciar el emulador, tenemos en el registro `a1` la dirección del DTB.
+
+Más información sobre los dispositivos que podemos encontrar: https://www.sifive.com/blog/risc-v-qemu-part-1-privileged-isa-hifive1-virtio
+
+### Poweroff y reboot
+
+En el *dts* podemos ver 2 propiedades interesantes: `poweroff` y `reboot`. Vemos que en el caso de *poweroff*, tenemos un valor de `0x5555`, y dice ser compatible con `syscon-poweroff`, entre otros datos.
+
+Más abajo podemos ver el dispositivo `test@1000000`, que casualmente es compatible con *syscon*. Lo que nos permite este dispositivo es escribirle el valor de la acción que queremos realizar: apagar o reiniciar la máquina.
+
+Escribimos una función `shutdown` que nos permita apagar la máquina virtual y salir de qemu.
+
+### Dispositivo UART
+
+Creamos un dispositivo *UART*. Para esto, sabiendo que QEMU designa la posición de memoria *0x1000_0000* para virtualizar un dispositivo NS16550 "instanciamos" uno en nuestro kmain para informar sobre la ejecución del kernel.
+
+En nuestras pruebas podemos agregarle la opción `stdout=PIPE` a nuestro proceso de QEmu para poder leer la salida del kernel y compararla contra nuestras pruebas.
