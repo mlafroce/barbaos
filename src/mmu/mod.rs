@@ -4,6 +4,8 @@
 use crate::{print, println};
 use crate::devices::uart::Uart;
 
+pub mod page_table;
+
 extern "C" {
     static HEAP_START: usize;
     static HEAP_SIZE: usize;

@@ -15,14 +15,15 @@
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
-
 mod assembly;
 mod devices;
 mod handlers;
 mod mmu;
 
+#[cfg(test)]
 mod test;
 
+use mmu::page_table::PageTable;
 use devices::uart::Uart;
 #[macro_use]
 mod macros;
@@ -34,8 +35,9 @@ fn kmain() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(0x1000_0000);
     uart.init();
+    PageTable::init();
     #[cfg(test)]
     test_main();
-    println!("Hello Rust!");
     mmu::print_mem_info();
+    PageTable::print_allocations();
 }

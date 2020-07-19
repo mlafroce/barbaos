@@ -1,6 +1,6 @@
-/// Basado en https://os.phil-opp.com/testing/
-use crate::devices::uart::Uart;
+mod mmu;
 
+use crate::devices::uart::Uart;
 use crate::{print, println};
 
 pub trait Testable {
@@ -22,9 +22,4 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     for test in tests {
         test.run();
     }
-}
-
-#[test_case]
-fn trivial() {
-    assert_eq!(2+2, 4);
 }
