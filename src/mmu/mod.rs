@@ -3,6 +3,8 @@
 //! Por el momento sólo implementamos la parte de paginación
 use crate::{print, println};
 
+pub mod riscv64;
+
 extern "C" {
     static TEXT_START: usize;
     static TEXT_END: usize;

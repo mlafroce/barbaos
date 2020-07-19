@@ -138,3 +138,15 @@ Agregamos en el arranque un parseo básico del *device tree*, con el que imprimi
 Exportamos direcciones de memoria con el script del linkeditor y luego usamos un snippet en assembly para guardar esas direcciones en variables globales. Luego definiremos un tamaño de página de memoria standard, de 4kb, y luego, conociendo la dirección del heap y su tamaño, procedemos a dividir el heap en páginas.
 
 Utilizamos el dispositivo UART para imprimir las direcciones de memoria que identificamos.
+
+
+### Alloc
+
+En este paso hacemos un alloc primitivo de páginas. Recibo por parámetro la cantidad de páginas que quiero reservar de forma continua.
+
+Iteramos la lista de páginas y buscamos una secuencia de N páginas libres. Si la encontramos, devolvemos el puntero.
+
+
+### Dealloc
+
+Implementamos un dealloc para liberar la memoria reservada por `alloc`. Hacemos un chequeo básico de no estar liberando un puntero nulo o un double free.
