@@ -1,5 +1,6 @@
 from pygdbmi.gdbcontroller import GdbController
-from subprocess import Popen
+from subprocess import Popen, PIPE
+from time import sleep
 
 import pytest
 
@@ -21,23 +22,35 @@ Lanza una instancia de qemu en un proceso aparte
 """
 @pytest.fixture
 def qemu_process():
-    process = Popen(QEMU_COMMAND)
+    process = Popen(QEMU_COMMAND, stdout=PIPE)
     yield process
     process.kill()
 
 """
-El 
+Inicializa el controlador de gdb
 """
-def test_kill(qemu_process):
-    gdbmi = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
-
-    gdbmi.write("target remote :1234")
+@pytest.fixture
+def gdbmi(): 
+    controller = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
+    controller.write("target remote :1234")
+    return controller
+    
+"""
+Test básico de levantar una instancia y matarla
+"""
+def test_kill(qemu_process, gdbmi):
     gdbmi.write("k")
 
-def test_should_timeout(qemu_process):
-    gdbmi = GdbController([DEBUGGER, KERNEL, "--interpreter=mi3"])
-
-    gdbmi.write("target remote :1234")
+def test_should_timeout(qemu_process, gdbmi):
     response = gdbmi.write("c")
     with pytest.raises(Exception):
         response = gdbmi.write("c")
+
+"""
+Test impresión hello world
+"""
+def test_hello(qemu_process, gdbmi):
+    gdbmi.write("c")
+    sleep(0.01)
+    output = qemu_process.stdout.readline().strip()
+    assert output == b"Hello Rust!"

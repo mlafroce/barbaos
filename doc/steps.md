@@ -71,3 +71,12 @@ El primer "-s" es para que se levante un servidor de gdb en el puerto :1234, el 
 ### Tests
 
 Con este kernel vacío lo único que podemos hacer es ejecutarlo. Escribimos un test para probar que podemos levantar una instancia de QEmu y matarla.
+
+
+## Dispositivo UART
+Creamos un dispositivo *UART*. Para esto, sabiendo que QEMU designa la posición de memoria *0x1000_0000* para virtualizar un dispositivo NS16550 "Instanciamos" uno en nuestro kmain para informar sobre la ejecución del kernel.
+
+Más información del mapeo de memoria: https://www.sifive.com/blog/risc-v-qemu-part-1-privileged-isa-hifive1-virtio
+Un dispositivo UART nos va a ayudar mucho a debuggear nuestro sistema, ya que nos permite comunicarnos por medio del puerto serie.
+
+En nuestras pruebas vamos a agregarle la opción `stdout=PIPE` a nuestro proceso de QEmu para poder leer la salida del kernel y compararla contra nuestras pruebas

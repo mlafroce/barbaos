@@ -13,13 +13,16 @@
     panic_info_message)]
 
 pub mod assembly;
+pub mod devices;
+use devices::uart::Uart;
 
-/// Override de la macro print de Rust, para imprimir por pantalla, por ahora vacío
+/// Override de las macros de Rust
 #[macro_export]
 macro_rules! print
 {
     ($($args:tt)+) => ({
-
+        use core::fmt::Write;
+        let _ = write!(Uart::new(0x1000_0000), $($args)+);
     });
 }
 
@@ -73,7 +76,13 @@ fn abort() -> ! {
     }
 }
 
+
+
 #[no_mangle]
 extern "C"
 fn kmain() {
+    // Inicializo con la dirección de memoria que configuré en virt.lds
+    let uart = Uart::new(0x1000_0000);
+    uart.init();
+    println!("Hello Rust!");
 }
