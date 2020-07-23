@@ -1,4 +1,5 @@
 use crate::{print, println};
+use core::slice::from_raw_parts_mut;
 
 const PAGE_ORDER: usize = 12;
 
@@ -99,6 +100,20 @@ impl PageTable {
             }
         }
         None
+    }
+
+    #[allow(dead_code)]
+    pub fn zalloc(&self, pages: usize) -> Option<*mut u8> {
+        let allocated = self.alloc(pages);
+        if let Some(data) = allocated {
+            unsafe {
+                let pages_slice = from_raw_parts_mut(data, pages * PAGE_SIZE);
+                for item in &mut pages_slice.iter_mut() {
+                    *item = 0;
+                }
+            }
+        }
+        allocated
     }
 
     /// Libera páginas reservadas
