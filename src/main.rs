@@ -29,6 +29,7 @@ use devices::uart::Uart;
 mod macros;
 
 
+/// Función principal del kernel
 #[no_mangle]
 extern "C"
 fn kmain() {

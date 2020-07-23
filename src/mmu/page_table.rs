@@ -1,6 +1,8 @@
 use crate::{print, println};
 use crate::devices::uart::Uart;
 
+use core::slice::from_raw_parts_mut;
+
 
 extern "C" {
     pub static HEAP_START: usize;
@@ -94,6 +96,23 @@ impl PageTable {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn zalloc(pages: usize) -> Option<*mut u8> {
+        let allocated = PageTable::alloc(pages);
+        match allocated {
+            Some(page) => {
+                unsafe {
+                    let pages_slice = from_raw_parts_mut(page, pages * PAGE_SIZE);
+                    for item in &mut pages_slice.iter_mut() {
+                        *item = 0;
+                    }
+                }
+                Some(page)
+            }
+            None => None,
+        }
+    }
+
     /// Libera páginas reservadas
     pub fn dealloc(ptr: *mut u8) {
         if !ptr.is_null() {
@@ -107,8 +126,7 @@ impl PageTable {
                     cur_page = cur_page.add(1);
                 }
                 // Verificación mínima de double free
-                assert!(
-                (*cur_page).is_last(),
+                assert!( (*cur_page).is_last(),
                     "Possible double-free detected! (Not taken found before last)"
                 );
                 // If we get here, we've taken care of all previous pages and
