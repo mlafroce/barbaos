@@ -1,4 +1,5 @@
 mod mmu;
+mod page_table;
 
 use crate::devices::uart::Uart;
 use crate::{print, println};

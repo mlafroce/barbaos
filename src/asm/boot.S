@@ -44,7 +44,7 @@ _start:
   // Interrupciones habilitadas:
   // 1 << 3: software interrupts `irq_software_i`
   // 1 << 7: timer interrupts `irq_timer_i`
-  // 1 << 11: externa interrupts `irq_extenal_i`
+  // 1 << 11: external interrupts `irq_extenal_i`
   li      t3, (1 << 3) | (1 << 7) | (1 << 11)
   csrw    mie, t3
   // Ya configuramos las interrupciones, ahora podemos salir hacia el final de este código.

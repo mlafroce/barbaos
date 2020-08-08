@@ -1,10 +1,25 @@
 //! # Módulo de MMU (Memory management unit)
 //!
-//! Por el momento sólo implementamos la parte de paginación
+//! La MMU de RISCV tiene muchas particularidades. Para empezar, la memoria
+//! virtual está disponible en los modos supervisor y usuario, dado que el modo
+//! máquina sólo accede a la memoria física de forma directa.
+//! Además, si bien la versión de 32 bits de la arquitectura tiene una cantidad
+//! de bits fija para la memoria virtual, en la versión de 64 bits esta
+//! cantidad tiene 3 configuracíones distintas.
+//!
+//! La memoria virtual se implementa con una tabla de paginación que funciona
+//! como raiz de un árbol de páginas. Puede haber hasta 3 (o 4 según la
+//! configuración elegida) niveles de jerarquía. Cualquier tabla de árbol
+//! puede ser una hoja, lo que nos permite reservar páginas de memoria de
+//! distinto tamaño.
+//!
+//! La implementación de una MMU sólo necesita de un "walker" que recorra las
+//! páginas de memoria (PTW), y de un *Translation look-aside buffer* TLB.
 use crate::{print, println};
 use crate::devices::uart::Uart;
 
 pub mod page_table;
+pub mod map_table;
 
 extern "C" {
     static HEAP_START: usize;

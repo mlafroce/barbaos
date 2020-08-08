@@ -136,6 +136,11 @@ impl PageTable {
         }
     }
 
+    pub fn pages_needed(start: usize, end: usize) -> usize {
+        (round_up(end, 12) - round_up(start, 12)) / PAGE_SIZE + 1
+
+    }
+
     pub fn print_allocations() {
         unsafe {
             let num_pages = HEAP_SIZE / PAGE_SIZE;

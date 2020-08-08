@@ -24,6 +24,7 @@ mod mmu;
 mod test;
 
 use mmu::page_table::PageTable;
+use mmu::map_table::MapTable;
 use devices::uart::Uart;
 #[macro_use]
 mod macros;
@@ -39,6 +40,13 @@ fn kmain() {
     PageTable::init();
     #[cfg(test)]
     test_main();
-    mmu::print_mem_info();
-    PageTable::print_allocations();
+    #[cfg(not(test))]
+    {
+        mmu::print_mem_info();
+        let map_table_page = PageTable::zalloc(1).unwrap();
+        let map_table = unsafe {&*(map_table_page as *mut MapTable)};
+        let satp = map_table.get_initial_satp();
+        PageTable::print_allocations();
+        println!("\x1b[1msatp:\x1b[0m 0x{:x}", satp);
+    }
 }

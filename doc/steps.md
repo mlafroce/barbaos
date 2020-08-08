@@ -112,3 +112,29 @@ Iteramos la lista de páginas y buscamos una secuencia de N páginas libres. Si 
 ### Dealloc
 
 Implementamos un dealloc para liberar la memoria reservada por `alloc`. Hacemos un chequeo básico de no estar liberando un puntero nulo o un double free.
+
+
+## MMU (sin page faults)
+
+RISC-V es una arquitectura modular, algunas de sus implementaciones son muy similares a las de un microcontrolador: muy pocas instrucciones, sin instrucciones de privilegio y sin MMU. Por este motivo, el MMU es un hardware externo al procesador.
+Cuando el sistema corre en el anillo de seguridad 1 (modo *M*), el de máquina, la *MMU* está desactivada y hacemos uso directo de la memoria.
+Cuando pasamos al anillo 2, el de supervisor, activamos la *MMU*.
+
+La *MMU* se configura con el registro **SATP** (Supervisor Address Translation and Protection). Este registro tiene 3 campos:
+
+* **MODE**: que define el tipo de transformación (0 si se usa memoria física, otros valores según si es RISCV-32 o RISCV64).
+
+* **ASID**: utilizado para asociar un espacio de memoria (*address space*) a un proceso. Podemos elegir 0 y recargar toda la TLB, o usar algo único como el PID para solo recargar si es necesario.
+
+* **PPN**: *Physical page number*, la *dirección* de la página donde va a estar alojada nuestra TLB. Se le quitan los 12 primeros bits (porque las páginas son de 2^12 bytes).
+
+En esta versión no atendemos las interrupciones por Page Faults y todavía no habilitamos el modo supervisor.
+
+### Map
+
+Implementamos la función `map`, con la que asignamos una dirección de memoria física a una dirección virtual.
+Usaremos el modelo de paginado `SV39`. Esto significa que dividimos la dirección virtual en 3 partes de 9 bits: VPN2, VPN1 y VPN0 (Virtual Page Number), cada una de estas partes consta de 9 bits y refieren al índice de una página de memoria virtual. Existen otras configuraciones, como SV48 de 4 niveles de 8 bits, o SV32, similar a SV39 pero para arquitecturas de 32bits
+De esta forma RISC-V nos ofrece 3 niveles de paginación: paginas de 4KB para el nivel 0, de 2MB para nivel 1 o de 1GB para nivel 2
+Empezamos con una página `root`, que contiene un índice de entradas de páginas virtuales. Si el índice posee alguno de los flags `RWX` (Lectura, Escritura o Ejecución), entonces es esta página es una hoja.
+
+Nuestra función map recibe la dirección de la tabla raiz, la dirección virtual, la física a la que queremos mapear, y el nivel de la página.
