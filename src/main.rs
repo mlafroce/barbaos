@@ -23,6 +23,7 @@ mod mmu;
 #[cfg(test)]
 mod test;
 
+use core::ptr::null_mut;
 use mmu::page_table::PageTable;
 use mmu::map_table::MapTable;
 use devices::uart::Uart;
@@ -31,22 +32,37 @@ mod macros;
 
 
 /// Función principal del kernel
+
+static mut KMAP_TABLE: *mut MapTable = null_mut();
+
 #[no_mangle]
 extern "C"
-fn kmain() {
+fn kinit() -> usize {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(0x1000_0000);
     uart.init();
+    println!("\x1b[1m[kinit]\x1b[0m");
+    mmu::print_mem_info();
     PageTable::init();
     #[cfg(test)]
     test_main();
-    #[cfg(not(test))]
-    {
-        mmu::print_mem_info();
-        let map_table_page = PageTable::zalloc(1).unwrap();
-        let map_table = unsafe {&*(map_table_page as *mut MapTable)};
-        let satp = map_table.get_initial_satp();
-        PageTable::print_allocations();
-        println!("\x1b[1msatp:\x1b[0m 0x{:x}", satp);
+    mmu::print_mem_info();
+    let map_table_page = PageTable::zalloc(1).unwrap();
+    let map_table = unsafe {&*(map_table_page as *mut MapTable)};
+    PageTable::print_allocations();
+    map_table.init_map();
+    let table_ptr = unsafe {KMAP_TABLE};
+    println!("map_table_page: {:p}", table_ptr);
+    map_table.get_initial_satp()
+}
+
+#[no_mangle]
+extern "C"
+fn kmain() {
+    println!("\x1b[1m[kmain start]\x1b[0m");
+    unsafe {
+        let table_ptr = &*(KMAP_TABLE);
+        println!("map_table_page: {:p}", table_ptr);
     }
+    mmu::print_mem_info();
 }

@@ -198,6 +198,9 @@ impl MapTable {
         let root_ppn = (phys_addr as i64) >> 12;
         8 << 60 | root_ppn as usize
     }
+
+    /// TODO: mapear direcciones virtuales a las físicas inicializadas en modo máquina
+    pub fn init_map(&self) {}
 }
 
 impl Default for MapTable {
