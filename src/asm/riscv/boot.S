@@ -35,9 +35,10 @@ _start:
   // Agrego un offset para el stack pointer
   li        t0, KERNEL_STACK_SIZE
   add       sp, t1, t0
+  la        ra, loop_forever
   // Configuración inicial del modo máquina
   jal       machine_mode_init
-  j         kmain_init
+  j         supervisor_mode_init
 secondary_harts:
   // Acá van los otros nucleos esperando a ser despertados por una interrupción de soft.
   // A este tipo de interrupciones se lo llama SIPI (Software Intra-Processor Interrupt).

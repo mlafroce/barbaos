@@ -207,6 +207,9 @@ La *MMU* se configura con el registro **SATP** (Supervisor Address Translation a
 
 * **ASID**: utilizado para asociar un espacio de memoria (*address space*) a un proceso. Podemos elegir 0 y recargar toda la TLB, o usar algo único como el PID para solo recargar si es necesario.
 
+* **PPN**: *Physical page number*, la *dirección* de la página donde va a estar alojada nuestra TLB. Se le quitan los 12 primeros bits (porque las páginas son de 2^12 bytes).
+  
+
 ## Modo supervisor
 
 Como indicamos, el módo *Máquina* utiliza memoria física, si queremos usar memoria virtual necesitamos pasar al modo *Supervisor* o *Usuario*. Para esto convertimos nuestra función *kmain* en *kinit*, donde se inicializan los dispositivos, paginación de memoria y memoria virtual. Una vez inicializado devolvemos el valor del registro `satp`. Este registro posee la ubicación (alineada a una página de memoria) de la raiz de nuestro **TLB**, como se describió anteriormente. Se configura este registro y se hace un retorno de interrupción para pasar al modo supervisor.
@@ -214,6 +217,8 @@ Como indicamos, el módo *Máquina* utiliza memoria física, si queremos usar me
 Una vez configurada la MMU, este modo *Supervisor* puede trabajar con memoria virtual. Como las configuraciones trabajadas hasta ahora fueron realizadas en modo *máquina*, debemos configurar la tabla de mapeo de memoria de las regiones accedidas.
 Es necesario configurar la TLB para acceder a la memoria con las instrucciones, dispositivos, etc. De lo contrario sucederá un *Page Fault*, y al no tener interrupciones configuradas, nuestro kernel quedará loopeando infinitamente.
 
+También debemos recordar configurar la Physical Memory Protection (PMP). Esta protección nos permite poner restricciones a ciertas regiones de memoria incluso en modo M.
+Luego de la versión 6.0 de Qemu, es mandatoria la configuración de estos registros.
 
 ### Memoria virtual
 
