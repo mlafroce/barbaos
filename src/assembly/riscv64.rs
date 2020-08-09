@@ -1,4 +1,5 @@
-use crate::{kinit, kmain, DTB_ADDRESS};
+use crate::init::{kinit, DTB_ADDRESS};
+use crate::kmain;
 use core::arch::{asm, global_asm};
 
 // Assembly imports module
@@ -16,8 +17,11 @@ global_asm!(include_str!("../asm/riscv/mem.S"));
 /// The 'mie' (interrupt enable) register is accessible exclusively in machine mode.
 /// Please refer to the privileged ISA documentation for format details.
 #[inline]
-pub unsafe fn mie_write(value: usize) {
-    asm!("csrw mie, {}", in(reg) value, options(nostack))
+pub unsafe fn enable_pmp() {
+    asm!("li t0, 0x1F", options(nostack));
+    asm!("csrw  pmpcfg0, t0", options(nostack));
+    asm!("not t0, zero", options(nostack));
+    asm!("csrw  pmpaddr0, t0", options(nostack));
 }
 
 /// # Safety
@@ -31,6 +35,14 @@ pub unsafe fn mepc_write(value: usize) {
 /// # Safety
 /// The 'mscratch' (scratch register) register is accessible exclusively in machine mode.
 /// Please refer to the privileged ISA documentation for format details
+#[inline]
+pub unsafe fn mie_write(value: usize) {
+    asm!("csrw mie, {}", in(reg) value, options(nostack))
+}
+#[inline]
+pub unsafe fn mideleg_write(value: usize) {
+    asm!("csrw mideleg, {}", in(reg) value, options(nomem, nostack))
+}
 #[inline]
 pub unsafe fn mscratch_write(value: usize) {
     asm!("csrw mscratch, {}", in(reg) value, options(nostack))
@@ -60,8 +72,24 @@ pub unsafe fn mret() {
     asm!("mret", options(nomem, nostack))
 }
 #[inline]
+pub unsafe fn sepc_write(value: usize) {
+    asm!("csrw sepc, {}", in(reg) value, options(nostack))
+}
+#[inline]
 pub unsafe fn satp_write(value: usize) {
     asm!("csrw satp, {}", in(reg) value, options(nostack))
+}
+#[inline]
+pub unsafe fn satp_fence_asid(asid: usize) {
+    asm!("sfence.vma zero, {}", in(reg) asid, options(nostack))
+}
+#[inline]
+pub unsafe fn sfence_vma() {
+    asm!("sfence.vma", options(nomem, nostack))
+}
+#[inline]
+pub unsafe fn stvec_write(value: usize) {
+    asm!("csrw mtvec, {}", in(reg) value, options(nostack))
 }
 #[inline]
 pub unsafe fn wfi() {

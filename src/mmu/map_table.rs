@@ -5,6 +5,8 @@ use crate::{print, println};
 use core::ptr::NonNull;
 use core::slice::from_raw_parts_mut;
 
+const SATP_MODE_SV39: usize = 8 << 60;
+
 #[repr(i64)]
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
@@ -68,9 +70,10 @@ impl Default for Entry {
 }
 
 /// Tabla con información para mapear memoria virtual a memoria física
+#[repr(C)]
 pub struct MapTable<'a> {
-    page_table: &'a PageTable,
     pub entries: [Entry; 512],
+    page_table: &'a PageTable,
 }
 
 impl<'a> MapTable<'a> {
@@ -129,11 +132,13 @@ impl<'a> MapTable<'a> {
     }
 
     /// Elimina mapeos creados con la función `map`.
+    #[allow(dead_code)]
     pub fn unmap(&mut self) {
         MapTable::unmap_entries(self.page_table, &mut self.entries);
     }
 
     /// Version recursiva
+    #[allow(dead_code)]
     fn unmap_entries(page_table: &PageTable, entries: &mut [Entry]) {
         for cur_entry in entries {
             if cur_entry.is_valid() && !cur_entry.is_leaf() {
@@ -176,12 +181,18 @@ impl<'a> MapTable<'a> {
                 let offset_mask = (1 << (12 + i * 9)) - 1;
                 let page_offset = vaddr & offset_mask;
                 let phys_addr = ((cur_table.get_entry() << 2) as usize) & !offset_mask;
+                println!(
+                    "Entry_table {:x}: {:x}",
+                    (cur_table.entry << 2) as usize & !offset_mask,
+                    (cur_table.entry & EntryBits::Execute.val())
+                );
                 return Some(phys_addr | page_offset);
             } else {
                 // Si no es hoja, ingresamos a la rama como en `map`
                 let entry = ((cur_table.get_entry() & !0x3ff) << 2) as *mut Entry;
+                let entry_child = vpn[i - 1];
                 // cur_table ahora es la tabla en la dirección de memoria de la tabla anterior[vpn[i]]
-                cur_table = unsafe { entry.add(vpn[i - 1]).as_mut().unwrap() };
+                cur_table = unsafe { entry.add(entry_child).as_mut().unwrap() };
             }
         }
         None
@@ -252,10 +263,17 @@ impl<'a> MapTable<'a> {
             EntryBits::ReadWrite.val(),
             0,
         );
+        self.map(
+            super::SIFIVE_TEST_ADDRESS,
+            super::SIFIVE_TEST_ADDRESS,
+            EntryBits::ReadWrite.val(),
+            0,
+        );
         // UART
         self.range_map(0x1000_0000, 0x1000_0000, EntryBits::ReadWrite.val());
-        // TODO Ver qué son estas direcciones
-        self.range_map(0x8009_3000, 0x8009_3000, EntryBits::ReadWrite.val());
+        let self_addr = self as *const _ as usize;
+        self.map(self_addr, self_addr, EntryBits::ReadWrite.val(), 0);
+        // TODO Ver qué es esta dirección
         self.range_map(0x8009_4000, 0x8009_4000, EntryBits::ReadWrite.val());
         plic::map_pages(self);
         self.test_init_map();
@@ -269,7 +287,7 @@ impl<'a> MapTable<'a> {
     pub unsafe fn test_init_map(&self) {
         let entry_address = &self.entries as *const _ as usize;
         let addresses = [
-            (super::TEXT_START + 0x3200, "text_start"),
+            (super::TEXT_START + 0x3500, "text_start"),
             (super::TEXT_END, "text_end"),
             (super::RODATA_START, "rodata_start"),
             (super::RODATA_END, "rodata_end"),
@@ -299,8 +317,10 @@ impl<'a> MapTable<'a> {
     /// * 16 del address space identifier (ASID)
     /// * 44 de la dirección física de la raiz de la tabla de paginación (PPN)
     pub fn get_initial_satp(&self) -> usize {
+        let asid = 1;
         let phys_addr = self as *const MapTable;
         let root_ppn = (phys_addr as i64) >> 12;
-        8 << 60 | root_ppn as usize
+        let asid_bits = asid << 44;
+        SATP_MODE_SV39 | asid_bits | root_ppn as usize
     }
 }

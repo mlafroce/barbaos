@@ -242,7 +242,7 @@ pub struct PageAllocator;
 
 unsafe impl GlobalAlloc for PageAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let page_table = GLOBAL_PAGE_TABLE.get_root();
         let pages_needed = (layout.size() >> PAGE_ORDER) + 1;
         if let Some(address) = page_table.alloc(pages_needed) {
             return address.as_ptr();
@@ -251,7 +251,7 @@ unsafe impl GlobalAlloc for PageAllocator {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let page_table = GLOBAL_PAGE_TABLE.get_root();
         if let Some(ptr) = NonNull::new(ptr) {
             page_table.dealloc(ptr);
         }
@@ -260,7 +260,7 @@ unsafe impl GlobalAlloc for PageAllocator {
 
 unsafe impl Allocator for PageAllocator {
     fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
-        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let page_table = GLOBAL_PAGE_TABLE.get_root();
         let pages_needed = (layout.size() >> PAGE_ORDER) + 1;
         if let Some(ptr) = page_table.alloc(pages_needed) {
             let fat_ptr;
@@ -275,7 +275,7 @@ unsafe impl Allocator for PageAllocator {
     }
 
     unsafe fn deallocate(&self, ptr: NonNull<u8>, _layout: Layout) {
-        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let page_table = GLOBAL_PAGE_TABLE.get_root();
         page_table.dealloc(ptr);
     }
 }
@@ -294,7 +294,7 @@ impl GlobalPageTable {
         *self.root.get() = root.clone();
     }
 
-    fn get_page_table(&self) -> &PageTable {
+    pub fn get_root(&self) -> &PageTable {
         unsafe { &*self.root.get() }
     }
 }

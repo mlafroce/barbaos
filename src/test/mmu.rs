@@ -1,6 +1,5 @@
-use crate::mmu::riscv64::{PageBits, PAGE_ALLOCATOR};
+use crate::mmu::riscv64::{PageBits, PageTable, PAGE_ALLOCATOR};
 use crate::mmu::HEAP_START;
-use crate::PageTable;
 use alloc::boxed::Box;
 use core::ptr::NonNull;
 
