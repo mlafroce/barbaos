@@ -1,9 +1,11 @@
-use crate::assembly::riscv64::mscratch_write;
+use crate::assembly::riscv64;
 use crate::cpu::riscv64::plic;
-use crate::devices::{read_uart, Uart};
+use crate::devices::uart_16550::{read_uart, Uart};
+use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{MTIMECMP_ADDRESS, MTIME_ADDRESS, PAGE_SIZE};
 use crate::{print, println};
 use alloc::boxed::Box;
+use core::mem::size_of;
 use core::ptr::null_mut;
 
 /// Trap Frames para cada núcleo (8 núcleos en total)
@@ -41,22 +43,30 @@ impl TrapFrame {
         }
     }
 
-    /// inicializa el riscv64 frame del hart 0
-    pub fn init() {
+    /// inicializa el trap frame del hart 0
+    pub fn init(map_table: &mut MapTable) {
         let frame;
         unsafe {
             frame = &mut KERNEL_TRAP_FRAME[0];
         }
+        frame.satp = map_table.get_initial_satp();
         // El scratch apunta al contexto de mi frame
         let scratch_val = frame as *const TrapFrame as usize;
-        unsafe { mscratch_write(scratch_val) };
+        unsafe { riscv64::mscratch_write(scratch_val) };
         let trap_stack_mem = Box::<u8>::new(0);
         let trap_stack = Box::<u8>::into_raw(trap_stack_mem);
         unsafe {
             // Reservo memoria para el stack de mi riscv64 handler
             // Como el stack crece de arriba hacia abajo, le paso la dirección del final del stack
             frame.trap_stack = trap_stack.add(PAGE_SIZE);
+            map_table.range_map(
+                scratch_val,
+                scratch_val + size_of::<TrapFrame>(),
+                EntryBits::ReadWrite.val(),
+            );
         }
+        // sincronizo memoria
+        unsafe { riscv64::satp_fence_asid(0) };
     }
 }
 

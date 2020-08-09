@@ -21,6 +21,10 @@ extern "C" {
     pub static mut HEAP_SIZE: usize;
 }
 
+pub const MTIME_ADDRESS: usize = 0x0200_bff8;
+pub const MTIMECMP_ADDRESS: usize = 0x0200_4000;
+pub const SIFIVE_TEST_ADDRESS: usize = 0x0010_0000;
+
 /// Constantes con direcciones de regiones importantes de memoria
 pub fn print_mem_info() {
     unsafe {
