@@ -26,7 +26,7 @@ fn identity_single_map() {
 fn identity_range_map() {
 	let map_table_page = PageTable::zalloc(1).unwrap();
     let map_table : &mut MapTable = unsafe {&mut *(map_table_page as *mut MapTable)};
-    map_table.identity_map(0x1337000, 0x1340000, EntryBits::Read.val());
+    map_table.range_map(0x1337000, 0x1340000, EntryBits::Read.val());
     assert_eq!(map_table.virt_to_phys(0x1338000), Some(0x1338000));
     assert_eq!(map_table.virt_to_phys(0x1340000), Some(0x1340000));
     assert_eq!(map_table.virt_to_phys(0x1341000), None);

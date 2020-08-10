@@ -37,7 +37,7 @@ static mut KMAP_TABLE: *mut MapTable = null_mut();
 
 #[no_mangle]
 extern "C"
-fn kinit() -> usize {
+fn kinit() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(0x1000_0000);
     uart.init();
@@ -48,21 +48,30 @@ fn kinit() -> usize {
     test_main();
     mmu::print_mem_info();
     let map_table_page = PageTable::zalloc(1).unwrap();
-    let map_table = unsafe {&*(map_table_page as *mut MapTable)};
-    PageTable::print_allocations();
-    map_table.init_map();
-    let table_ptr = unsafe {KMAP_TABLE};
-    println!("map_table_page: {:p}", table_ptr);
-    map_table.get_initial_satp()
+    let mut map_table;
+    unsafe {
+        KMAP_TABLE = map_table_page as *mut MapTable;
+        map_table = &mut *(KMAP_TABLE);
+        map_table.init_map();
+        println!("map_table_page: {:p}", KMAP_TABLE);
+    }
+    map_table.update_satp();
+    unsafe {
+        map_table.virt_to_phys(KMAP_TABLE as usize).unwrap();
+        map_table.virt_to_phys(&KMAP_TABLE as *const _ as usize).unwrap();
+    }
 }
 
 #[no_mangle]
 extern "C"
 fn kmain() {
-    println!("\x1b[1m[kmain start]\x1b[0m");
+    println!("\x1b[1m[kmain]\x1b[0m");
     unsafe {
-        let table_ptr = &*(KMAP_TABLE);
-        println!("map_table_page: {:p}", table_ptr);
+        let test = "kmain";
+        let map_table = &*(KMAP_TABLE);
+        map_table.test_init_map();
+        println!("Hello {}", test);
     }
     mmu::print_mem_info();
+    println!("\x1b[1m<Finish>\x1b[0m");
 }

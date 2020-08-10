@@ -1,3 +1,6 @@
+use crate::{print, println};
+use crate::devices::uart::Uart;
+
 use super::page_table::{PageTable, PAGE_SIZE};
 
 #[repr(i64)]
@@ -179,12 +182,60 @@ impl MapTable {
 
     /// Mapea direcciones virtuales a una física del mismo valor
     /// Utiliza páginas de 4KB
-    pub fn identity_map(&mut self, start: usize, end: usize, bits: i64) {
+    pub fn range_map(&mut self, start: usize, end: usize, bits: i64) {
         let mut phys_addr = start & !(PAGE_SIZE - 1);
         let num_pages = PageTable::pages_needed(start, end);
         for _ in 0..num_pages {
             self.map(phys_addr, phys_addr, bits, 0);
             phys_addr += 1 << 12;
+        }
+    }
+
+    /// Mapea direcciones virtuales a las físicas inicializadas en modo máquina
+    pub unsafe fn init_map(&mut self) {
+        let entries_address = &self.entries as *const _ as usize;
+        self.map(entries_address, entries_address, EntryBits::ReadWrite.val(), 0);
+        // RODATA comparte espacio en la página con TEXT, así que primero mapeo
+        // RODATA como sólo lectura y después mapeo TEXT como ejecutable
+        // De esta forma me aseguro que la última página sea ejecutable 
+        self.range_map(super::RODATA_START, super::RODATA_END,
+                     EntryBits::Read.val());
+        self.range_map(super::TEXT_START, super::TEXT_END,
+                     EntryBits::ReadExecute.val());
+        self.range_map(super::DATA_START, super::DATA_END,
+                     EntryBits::ReadWrite.val());
+        self.range_map(super::BSS_START, super::BSS_END,
+                     EntryBits::ReadWrite.val());
+        self.range_map(super::KERNEL_STACK_START, super::KERNEL_STACK_END,
+                     EntryBits::ReadWrite.val());
+        let num_pages = PageTable::get_heap_pages_len();
+        self.range_map(super::HEAP_START, super::HEAP_START + num_pages * PAGE_SIZE,
+                     EntryBits::ReadWrite.val());
+        // UART
+        self.range_map(0x1000_0000, 0x1000_0000,
+                     EntryBits::ReadWrite.val());
+        self.range_map(0x8009_3000, 0x8009_3000,
+                     EntryBits::ReadWrite.val());
+        self.range_map(0x8009_4000, 0x8009_4000,
+                     EntryBits::ReadWrite.val());
+        self.range_map(0x8009_4000, 0x8009_4000,
+                     EntryBits::ReadWrite.val());
+        self.test_init_map();
+    }
+
+    /// Función para validar que esté todo mapeado
+    /// (Olvidé mapear self.entries y perdí varias horas dandome cuenta)
+    pub unsafe fn test_init_map(&self) {
+        let num_pages = PageTable::get_heap_pages_len();
+        let heap_end = super::HEAP_START + num_pages * PAGE_SIZE;
+        let entry_address = &self.entries as *const _ as usize;
+        let addresses = [super::TEXT_START, super::TEXT_END, super::RODATA_START, super::RODATA_END, 
+        super::DATA_START, super::DATA_END, super::BSS_START, super::BSS_END,
+        super::KERNEL_STACK_START, super::KERNEL_STACK_END, super::HEAP_START,
+        heap_end, entry_address];
+        for address in &addresses {
+            let phys = self.virt_to_phys(*address).unwrap();
+            println!("Test walk: {:x} -> {:x}", address, phys);
         }
     }
 
@@ -196,11 +247,16 @@ impl MapTable {
     pub fn get_initial_satp(&self) -> usize {
         let phys_addr = self as *const MapTable;
         let root_ppn = (phys_addr as i64) >> 12;
-        8 << 60 | root_ppn as usize
+        let satp_val = 8 << 60 | root_ppn as usize;
+        satp_val
     }
 
-    /// TODO: mapear direcciones virtuales a las físicas inicializadas en modo máquina
-    pub fn init_map(&self) {}
+    pub fn update_satp(&self) {
+        let satp_val = self.get_initial_satp();
+        unsafe {
+            llvm_asm!("csrw satp, $0" :: "r"(satp_val));
+        }
+    }
 }
 
 impl Default for MapTable {

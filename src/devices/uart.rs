@@ -52,7 +52,7 @@ impl Uart {
         }
     }
 
-    fn put_char(&self, c: u8) {
+    pub fn put_char(&self, c: u8) {
         let ptr = self.base_address as *mut u8;
         unsafe {
             // Asumimos que el transmisor está vacío

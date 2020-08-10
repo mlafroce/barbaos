@@ -136,9 +136,13 @@ impl PageTable {
         }
     }
 
+    /// Devuelve la cantidad de páginas necesarias para cubrir ese rango de memoria
     pub fn pages_needed(start: usize, end: usize) -> usize {
         (round_up(end, 12) - round_up(start, 12)) / PAGE_SIZE + 1
+    }
 
+    pub unsafe fn get_heap_pages_len() -> usize {
+        HEAP_SIZE / PAGE_SIZE
     }
 
     pub fn print_allocations() {
