@@ -13,14 +13,6 @@ global_asm!(include_str!("../asm/riscv/trap.S"));
 global_asm!(include_str!("../asm/riscv/mem.S"));
 
 /// # Safety
-/// The 'mstatus' register is accessible exclusively in machine mode.
-/// Please refer to the privileged ISA documentation for format details.
-#[inline]
-pub unsafe fn mstatus_write(value: usize) {
-    asm!("csrw mstatus, {}", in(reg) value, options(nostack))
-}
-
-/// # Safety
 /// The 'mie' (interrupt enable) register is accessible exclusively in machine mode.
 /// Please refer to the privileged ISA documentation for format details.
 #[inline]
@@ -34,6 +26,22 @@ pub unsafe fn mie_write(value: usize) {
 #[inline]
 pub unsafe fn mepc_write(value: usize) {
     asm!("csrw mepc, {}", in(reg) value, options(nostack))
+}
+
+/// # Safety
+/// The 'mscratch' (scratch register) register is accessible exclusively in machine mode.
+/// Please refer to the privileged ISA documentation for format details
+#[inline]
+pub unsafe fn mscratch_write(value: usize) {
+    asm!("csrw mscratch, {}", in(reg) value, options(nostack))
+}
+
+/// # Safety
+/// The 'mstatus' register is accessible exclusively in machine mode.
+/// Please refer to the privileged ISA documentation for format details.
+#[inline]
+pub unsafe fn mstatus_write(value: usize) {
+    asm!("csrw mstatus, {}", in(reg) value, options(nostack))
 }
 
 /// # Safety
@@ -51,7 +59,6 @@ pub unsafe fn mtvec_write(value: usize) {
 pub unsafe fn mret() {
     asm!("mret", options(nomem, nostack))
 }
-
 #[inline]
 pub unsafe fn wfi() {
     asm!("wfi", options(nomem, nostack))

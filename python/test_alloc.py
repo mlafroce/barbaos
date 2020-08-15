@@ -5,8 +5,8 @@ from time import sleep
 import pytest
 import re
 
-def call_dealloc(gdbmi, ptr):
-    gdbmi.write(f"call page_table.dealloc({ptr})")
+def call_dealloc(gdbmi, name):
+    print(gdbmi.write(f"call page_table.dealloc(${name})"))
 
 def set_alloc(gdbmi, name, size):
     gdbmi.write(f"set ${name} = page_table.alloc({size})")
@@ -36,12 +36,10 @@ def test_alloc(qemu_process, gdbmi):
     set_alloc(gdbmi, "fail", 10000)
 
     assert(get_alloc(gdbmi, "fail") == 0)
-    call_dealloc(gdbmi, get_alloc(gdbmi, "second"))
+    call_dealloc(gdbmi, "second")
     set_alloc(gdbmi, "some10k", 10000)
     set_alloc(gdbmi, "other10k", 10000)
 
     assert(get_alloc(gdbmi, "other10k") != 0)
 
     gdbmi.write("c")
-
-    output = qemu_process.stdout.readlines()
