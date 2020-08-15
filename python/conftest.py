@@ -26,7 +26,9 @@ def qemu_process():
     """
     Lanza una instancia de qemu en un proceso aparte
     """
-    return Popen(QEMU_COMMAND, stdout=PIPE)
+    process = Popen(QEMU_COMMAND, stdout=PIPE)
+    yield process
+    process.kill()
 
 
 @pytest.fixture
