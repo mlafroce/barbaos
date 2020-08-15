@@ -145,3 +145,12 @@ Nuestra función map recibe la dirección de la tabla raiz, la dirección virtua
 El módo *Máquina* utiliza memoria física, si queremos usar memoria virtual necesitamos pasar al modo *Supervisor* o *Usuario*. Para esto convertimos nuestra función *kmain* en *kinit*, donde se inicializan los dispositivos, paginación de memoria y memoria virtual. Una vez inicializado devolvemos el valor del registro `satp`. Este registro posee la ubicación (alineada a una página de memoria) de la raiz de nuestro **TLB**, como se describió anteriormente. Se configura este registro y se hace un retorno de interrupción para pasar al modo supervisor.
 
 En este modo se utiliza memoria virtual, como se configuró la MMU. Sin embargo, como ciertas configuraciones las hicimos en modo máquina, tenemos que configurar la tabla de mapeo para poder acceder a la memoria con las instrucciones, dispositivos, etc. De lo contrario sucederá un *Page Fault*, y al no tener interrupciones configuradas, nuestro kernel quedará loopeando infinitamente.
+
+
+## Interrupciones
+
+Esta parte fue muy complicada de sacar andando. En el tutorial retrocede a modo máquina para atender las interrupciones, sin embargo, en modo supervisor es donde anda la memoria virtual, así que... ¡A hacerlo andar en modo supervisor!
+
+Lo primero que hacemos es completar nuestra función `asm_trap_vector`, en la que ahora hacemos una copia de todos los registros y el registro de control y status (CSR) `mscratch`. Una vez que copiamos al stack todos nuestros registros, saltamos a la función `m_trap_handler` para analizar el motivo de la interrupción. Por el momento sólo adelantamos el *program counter* o ejecutamos un *panic!* según el motivo. Una vez que imprimimos el motivo de nuestra interrupción, volvemos a la ejecución
+
+**IMPORTANTE**: hay que tener en cuenta que, si estamos sobre una instrucción comprimida, al sumar 4 al *program counter* podemos caer sobre una instrucción no alineada. Esto rompería con la ejecución de nuestro sistema. Sin embargo, más adelante veremos que, en vez de adelantar el *program counter*, podemos llamar a funciones más específicas para este tipo de situaciones.

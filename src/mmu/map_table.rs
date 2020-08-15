@@ -226,16 +226,18 @@ impl MapTable {
     /// Función para validar que esté todo mapeado
     /// (Olvidé mapear self.entries y perdí varias horas dandome cuenta)
     pub unsafe fn test_init_map(&self) {
-        let num_pages = PageTable::get_heap_pages_len();
-        let heap_end = super::HEAP_START + num_pages * PAGE_SIZE;
         let entry_address = &self.entries as *const _ as usize;
-        let addresses = [super::TEXT_START, super::TEXT_END, super::RODATA_START, super::RODATA_END, 
-        super::DATA_START, super::DATA_END, super::BSS_START, super::BSS_END,
-        super::KERNEL_STACK_START, super::KERNEL_STACK_END, super::HEAP_START,
-        heap_end, entry_address];
+        let addresses = [
+            (super::TEXT_START + 0x3200, "text_start"), (super::TEXT_END, "text_end"),
+            (super::RODATA_START, "rodata_start"), (super::RODATA_END, "rodata_end"), 
+            (super::DATA_START, "data_start"), (super::DATA_END, "data_end"),
+            (super::BSS_START, "bss_start"), (super::BSS_END, "bss_end"),
+            (super::KERNEL_STACK_START, "kernel_stack_start"), (super::KERNEL_STACK_END, "ks_end"),
+            (super::HEAP_START, "heap_start"), (entry_address, "entry_address"),
+            (0x80006df8, "core::fmt::write")];
         for address in &addresses {
-            let phys = self.virt_to_phys(*address).unwrap();
-            println!("Test walk: {:x} -> {:x}", address, phys);
+            let phys = self.virt_to_phys(address.0).unwrap();
+            println!("Test walk {:20}: {:#x} -> {:#x}", address.1, address.0, phys);
         }
     }
 
@@ -247,8 +249,7 @@ impl MapTable {
     pub fn get_initial_satp(&self) -> usize {
         let phys_addr = self as *const MapTable;
         let root_ppn = (phys_addr as i64) >> 12;
-        let satp_val = 8 << 60 | root_ppn as usize;
-        satp_val
+        8 << 60 | root_ppn as usize
     }
 
     pub fn update_satp(&self) {
@@ -256,7 +257,7 @@ impl MapTable {
         unsafe {
             llvm_asm!("csrw satp, $0" :: "r"(satp_val));
         }
-    }
+    } 
 }
 
 impl Default for MapTable {

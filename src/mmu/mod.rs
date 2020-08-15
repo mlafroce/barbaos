@@ -40,7 +40,7 @@ extern "C" {
 pub fn print_mem_info() {
     unsafe {
         println!("\x1b[1m[print_mem_info]\x1b[0m");
-        println!("Static variables:   \x1b[1m{:#x}\x1b[0m", &TEXT_START);
+        println!("Static variables:   \x1b[1m{:p}\x1b[0m", &TEXT_START);
         println!("Text start:         \x1b[1m{:#x}\x1b[0m", TEXT_START);
         println!("Text end:           \x1b[1m{:#x}\x1b[0m", TEXT_END);
         println!("RO Data start:      \x1b[1m{:#x}\x1b[0m", RODATA_START);

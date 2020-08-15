@@ -16,6 +16,7 @@
 #![reexport_test_harness_main = "test_main"]
 
 mod assembly;
+mod cpu;
 mod devices;
 mod handlers;
 mod mmu;
@@ -24,6 +25,7 @@ mod mmu;
 mod test;
 
 use core::ptr::null_mut;
+use cpu::trap::TrapFrame;
 use mmu::page_table::PageTable;
 use mmu::map_table::MapTable;
 use devices::uart::Uart;
@@ -48,11 +50,12 @@ fn kinit() {
     test_main();
     mmu::print_mem_info();
     let map_table_page = PageTable::zalloc(1).unwrap();
-    let mut map_table;
+    let map_table;
     unsafe {
         KMAP_TABLE = map_table_page as *mut MapTable;
         map_table = &mut *(KMAP_TABLE);
         map_table.init_map();
+        TrapFrame::init(map_table);
         println!("map_table_page: {:p}", KMAP_TABLE);
     }
     map_table.update_satp();
@@ -60,6 +63,7 @@ fn kinit() {
         map_table.virt_to_phys(KMAP_TABLE as usize).unwrap();
         map_table.virt_to_phys(&KMAP_TABLE as *const _ as usize).unwrap();
     }
+    cpu::mscratch_read();
 }
 
 #[no_mangle]
@@ -73,5 +77,7 @@ fn kmain() {
         println!("Hello {}", test);
     }
     mmu::print_mem_info();
+    // cpu::mscratch_read(); //-> tira instruction fault
+    cpu::sscratch_read();
     println!("\x1b[1m<Finish>\x1b[0m");
 }
