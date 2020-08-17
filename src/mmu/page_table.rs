@@ -141,6 +141,10 @@ impl PageTable {
         (round_up(end, 12) - round_up(start, 12)) / PAGE_SIZE + 1
     }
 
+    /// Devuelve la cantidad de páginas correspondientes al heap
+    ///
+    /// # Safety
+    /// No tiene problemas de seguridad, las variables se inicializan por el linker
     pub unsafe fn get_heap_pages_len() -> usize {
         HEAP_SIZE / PAGE_SIZE
     }

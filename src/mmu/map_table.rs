@@ -192,6 +192,9 @@ impl MapTable {
     }
 
     /// Mapea direcciones virtuales a las físicas inicializadas en modo máquina
+    ///
+    /// # Safety
+    /// No tiene problemas de seguridad, las variables se inicializan por el linker
     pub unsafe fn init_map(&mut self) {
         let entries_address = &self.entries as *const _ as usize;
         self.map(entries_address, entries_address, EntryBits::ReadWrite.val(), 0);
@@ -211,12 +214,14 @@ impl MapTable {
         let num_pages = PageTable::get_heap_pages_len();
         self.range_map(super::HEAP_START, super::HEAP_START + num_pages * PAGE_SIZE,
                      EntryBits::ReadWrite.val());
+        self.map(super::MTIME_ADDRESS, super::MTIME_ADDRESS,
+                     EntryBits::Read.val(), 0);
+        self.map(super::MTIMECMP_ADDRESS, super::MTIMECMP_ADDRESS,
+                     EntryBits::ReadWrite.val(), 0);
         // UART
         self.range_map(0x1000_0000, 0x1000_0000,
                      EntryBits::ReadWrite.val());
         self.range_map(0x8009_3000, 0x8009_3000,
-                     EntryBits::ReadWrite.val());
-        self.range_map(0x8009_4000, 0x8009_4000,
                      EntryBits::ReadWrite.val());
         self.range_map(0x8009_4000, 0x8009_4000,
                      EntryBits::ReadWrite.val());
@@ -225,6 +230,9 @@ impl MapTable {
 
     /// Función para validar que esté todo mapeado
     /// (Olvidé mapear self.entries y perdí varias horas dandome cuenta)
+    ///
+    /// # Safety
+    /// No tiene problemas de seguridad, las variables se inicializan por el linker
     pub unsafe fn test_init_map(&self) {
         let entry_address = &self.entries as *const _ as usize;
         let addresses = [
@@ -234,7 +242,7 @@ impl MapTable {
             (super::BSS_START, "bss_start"), (super::BSS_END, "bss_end"),
             (super::KERNEL_STACK_START, "kernel_stack_start"), (super::KERNEL_STACK_END, "ks_end"),
             (super::HEAP_START, "heap_start"), (entry_address, "entry_address"),
-            (0x80006df8, "core::fmt::write")];
+            (super::MTIME_ADDRESS, "mtime address"), (0x80006df8, "core::fmt::write")];
         for address in &addresses {
             let phys = self.virt_to_phys(address.0).unwrap();
             println!("Test walk {:20}: {:#x} -> {:#x}", address.1, address.0, phys);

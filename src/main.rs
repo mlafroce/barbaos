@@ -26,6 +26,8 @@ mod test;
 
 use core::ptr::null_mut;
 use cpu::trap::TrapFrame;
+use cpu::trap::schedule_mtime_interrupt;
+use handlers::abort;
 use mmu::page_table::PageTable;
 use mmu::map_table::MapTable;
 use devices::uart::Uart;
@@ -59,10 +61,7 @@ fn kinit() {
         println!("map_table_page: {:p}", KMAP_TABLE);
     }
     map_table.update_satp();
-    unsafe {
-        map_table.virt_to_phys(KMAP_TABLE as usize).unwrap();
-        map_table.virt_to_phys(&KMAP_TABLE as *const _ as usize).unwrap();
-    }
+    schedule_mtime_interrupt(20);
     cpu::mscratch_read();
 }
 
@@ -80,4 +79,5 @@ fn kmain() {
     // cpu::mscratch_read(); //-> tira instruction fault
     cpu::sscratch_read();
     println!("\x1b[1m<Finish>\x1b[0m");
+    abort();
 }

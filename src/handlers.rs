@@ -27,7 +27,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 /// Una vez que `panic!` imprimió el error, aborto, llamando a la instrucción
 /// `wfi`, *Wait for interrupt*
 #[no_mangle]
-extern "C"
+pub extern "C"
 fn abort() -> ! {
     loop {
         unsafe {

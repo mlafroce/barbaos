@@ -5,10 +5,14 @@ use crate::mmu::map_table::MapTable;
 use crate::{print, println};
 use crate::devices::uart::Uart;
 use crate::mmu::map_table::EntryBits;
+use crate::mmu::{MTIME_ADDRESS, MTIMECMP_ADDRESS};
 
 /// Trap Frames para cada núcleo (8 núcleos en total)
 pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] =
     [TrapFrame::new(); 8];
+
+pub const TIMER_OFFSET_VALUE: u64 = 1000;
+const MSECS_CYCLES: u64 = 10_000;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -56,7 +60,6 @@ impl TrapFrame {
             map_table.range_map(scratch_val, scratch_val + size_of::<TrapFrame>(), EntryBits::ReadWrite.val());
             // Mapeo trap_stack
             map_table.range_map(trap_stack as usize, trap_stack.add(PAGE_SIZE) as usize, EntryBits::ReadWrite.val());
-            let virt_trap_stack = map_table.virt_to_phys(trap_stack.add(PAGE_SIZE) as usize).unwrap();
         }
         // sincronizo memoria
         super::satp_fence_asid(0);
@@ -86,13 +89,10 @@ extern "C" fn m_trap_handler(epc: usize,
                 // Machine software
                 println!("Machine software interrupt CPU#{}", hart);
             },
-            7 => unsafe {
+            7 => {
                 // Machine timer
-                let mtimecmp = 0x0200_4000 as *mut u64;
-                let mtime = 0x0200_bff8 as *const u64;
-                // The frequency given by QEMU is 10_000_000 Hz, so this sets
-                // the next interrupt to fire one second from now.
-                mtimecmp.write_volatile(mtime.read_volatile() + 10_000_000);
+                println!("Machine timer interrupt CPU#{}", hart);
+                schedule_mtime_interrupt(TIMER_OFFSET_VALUE);
             },
             11 => {
                 // Machine external (interrupt from Platform Interrupt Controller (PLIC))
@@ -151,4 +151,15 @@ extern "C" fn m_trap_handler(epc: usize,
     };
     // Finally, return the updated program counter
     return_pc
+}
+
+/// Asigna un valor al registro `mtimecmp` relativo al tiempo actual
+/// Se lanza una interrupcción luego de `msecs` milisegundos
+pub fn schedule_mtime_interrupt(msecs: u64) {
+    let mtimecmp = MTIMECMP_ADDRESS as *mut u64;
+    let mtime = MTIME_ADDRESS as *const u64;
+    unsafe {
+        let next_interrupt = mtime.read_volatile().wrapping_add(msecs * MSECS_CYCLES);
+        mtimecmp.write_volatile(next_interrupt);
+    }
 }
