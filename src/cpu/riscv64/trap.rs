@@ -1,4 +1,6 @@
 use crate::assembly::riscv64::mscratch_write;
+use crate::cpu::riscv64::plic;
+use crate::devices::{read_uart, Uart};
 use crate::mmu::riscv64::{MTIMECMP_ADDRESS, MTIME_ADDRESS, PAGE_SIZE};
 use crate::{print, println};
 use alloc::boxed::Box;
@@ -10,6 +12,8 @@ pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] = [TrapFrame::new(); 8];
 
 pub const TIMER_OFFSET_VALUE: u64 = 1000;
 const MSECS_CYCLES: u64 = 10_000;
+
+const UART_INT: u32 = 10;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -82,12 +86,23 @@ extern "C" fn m_trap_handler(
             }
             7 => {
                 // Machine timer
-                println!("Machine timer interrupt CPU#{}", hart);
                 schedule_mtime_interrupt(TIMER_OFFSET_VALUE);
             }
             11 => {
-                // Machine external (interrupt from Platform Interrupt Controller (PLIC))
-                println!("Machine external interrupt CPU#{}", hart);
+                // Machine external interrupt
+                if let Some(interrupt) = plic::next_interrupt() {
+                    // Ocurrió una interrupción en el Claim register
+                    match interrupt {
+                        UART_INT => {
+                            let uart = Uart::new(0x1000_0000);
+                            read_uart(&uart);
+                        }
+                        _ => {
+                            println!("Unknown interrupt: {}", interrupt);
+                        }
+                    }
+                    plic::complete(interrupt);
+                }
             }
             _ => {
                 panic!("Unhandled async riscv64 CPU#{} -> {}\n", hart, cause_num);

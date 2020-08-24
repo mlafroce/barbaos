@@ -1,5 +1,5 @@
 [build]
-target = "armv7a-none-eabi"
+target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
 runner = "qemu-system-riscv64 -machine virt -smp 2 -nographic -serial mon:stdio -bios none -kernel "

@@ -186,3 +186,10 @@ Para que el timer interno lance interrupciones tenemos que usar dos posiciones d
 Para lanzar una interrupción periódicamente, leemos el contenido de `mtime`, le sumamos un valor *delta* y lo almacenamos en la dirección `mtimecmp`.
 
 Estas interrupciones seran de utilidad para implementar multi-tasking
+
+
+### Interrupciones externas
+
+RISCV utiliza un controlador llamado **PLIC** (*Platform level interrupt controller*). Este controlador se utiliza para atender interrupciones externas. Como utilizamos QEmu sólo nos interesa las interrupciones de UART. Configuramos el id correspondiente al UART realizamos una lectura del dispositivo cada vez que recibimos un llamada.
+
+Ahora que nuestra entrada depende de una interrupción, podemos quitar el *busy loop* de `kmain` y llamar a `abort`. Esta función ejecuta una instrucción *wait for interrupt*. Podemos ver como baja enormemente el consumo de CPU con la nueva forma de ingresar caracteres.

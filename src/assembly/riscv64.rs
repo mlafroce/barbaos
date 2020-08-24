@@ -94,7 +94,7 @@ extern "C" fn kmain_init(_hart_id: usize) {
     // 1 << 3: software interrupts `irq_software_i`
     // 1 << 7: timer interrupts `irq_timer_i`
     // 1 << 11: externa interrupts `irq_extenal_i`
-    let interrupts = (1 << 3) | (1 << 7) | (1 << 11);
+    let interrupts = (1 << 3) | (1 << 11);
     unsafe {
         mstatus_write(status);
         // Valor de retorno al hacer mret (retorno de excepción)
