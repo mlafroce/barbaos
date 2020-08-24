@@ -1,3 +1,4 @@
+use crate::{print, println};
 use core::fmt::{Error, Write};
 
 /// Dispositivo UART
@@ -56,6 +57,24 @@ impl Uart {
         unsafe {
             // Asumimos que el transmisor está vacío
             ptr.add(0).write_volatile(c);
+        }
+    }
+}
+
+pub fn read_uart(uart: &Uart) {
+    if let Some(c) = uart.get_char() {
+        match c {
+            8 | 127 => {
+                // Backspace
+                print!("{} {}", 8 as char, 8 as char);
+            }
+            10 | 13 => {
+                // Newline or carriage-return
+                println!();
+            }
+            _ => {
+                print!("{}", c as char);
+            }
         }
     }
 }
