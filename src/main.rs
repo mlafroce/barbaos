@@ -27,6 +27,7 @@ use crate::devices::{shutdown, Uart};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
 use core::ptr::null;
 use core::sync::atomic::Ordering;
+//use cpu::trap::schedule_mtime_interrupt;
 
 static mut DTB_ADDRESS: *const u8 = null();
 
@@ -68,9 +69,21 @@ extern "C" fn kinit() {
 extern "C" fn kmain() {
     use crate::assembly::riscv64::wfi;
     use crate::cpu::riscv64::trap::schedule_mtime_interrupt;
+    use cpu::riscv64::plic;
     println!("Scheduling sleep");
     schedule_mtime_interrupt(200);
     println!("Waiting interrupt...");
+    println!("Setting up interrupts and PLIC...");
+    // We lower the threshold wall so our interrupts can jump over it.
+    plic::set_threshold(0);
+    // VIRTIO = [1..8]
+    // UART0 = 10
+    // PCIE = [32..35]
+    // Enable the UART interrupt.
+    plic::enable(10);
+    plic::set_priority(10, 1);
+    println!("\x1b[1m<Finish>\x1b[0m");
+    println!("Press any key...");
     unsafe {
         wfi();
     }
