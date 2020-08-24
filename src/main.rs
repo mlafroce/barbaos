@@ -25,18 +25,18 @@ mod mmu;
 mod test;
 
 use core::ptr::null_mut;
+use cpu::plic;
 use cpu::trap::TrapFrame;
 use cpu::trap::schedule_mtime_interrupt;
+use devices::uart::Uart;
 use handlers::abort;
 use mmu::page_table::PageTable;
 use mmu::map_table::MapTable;
-use devices::uart::Uart;
 #[macro_use]
 mod macros;
 
 
 /// Función principal del kernel
-
 static mut KMAP_TABLE: *mut MapTable = null_mut();
 
 #[no_mangle]
@@ -69,15 +69,23 @@ fn kinit() {
 extern "C"
 fn kmain() {
     println!("\x1b[1m[kmain]\x1b[0m");
-    unsafe {
-        let test = "kmain";
-        let map_table = &*(KMAP_TABLE);
-        map_table.test_init_map();
-        println!("Hello {}", test);
-    }
     mmu::print_mem_info();
     // cpu::mscratch_read(); //-> tira instruction fault
     cpu::sscratch_read();
+    println!("Setting up interrupts and PLIC...");
+    // We lower the threshold wall so our interrupts can jump over it.
+    plic::set_threshold(0);
+    // VIRTIO = [1..8]
+    // UART0 = 10
+    // PCIE = [32..35]
+    // Enable the UART interrupt.
+    plic::enable(10);
+    plic::set_priority(10, 1);
+    unsafe {
+        // lanzo un page fault, pero como el trap handler por ahora sólo
+        // avanza 4 bytes, necesito que esté alineado
+        //*(0x1234_5678 as *mut u32) = 0xDEADBEEF;
+    }
     println!("\x1b[1m<Finish>\x1b[0m");
     abort();
 }

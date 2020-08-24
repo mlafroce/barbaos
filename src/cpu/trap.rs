@@ -1,11 +1,12 @@
 use core::ptr::null_mut;
 use core::mem::size_of;
+use crate::cpu::plic;
+use crate::devices::uart::{Uart, read_uart};
 use crate::mmu::page_table::{PageTable, PAGE_SIZE};
 use crate::mmu::map_table::MapTable;
-use crate::{print, println};
-use crate::devices::uart::Uart;
 use crate::mmu::map_table::EntryBits;
 use crate::mmu::{MTIME_ADDRESS, MTIMECMP_ADDRESS};
+use crate::{print, println};
 
 /// Trap Frames para cada núcleo (8 núcleos en total)
 pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] =
@@ -13,6 +14,8 @@ pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] =
 
 pub const TIMER_OFFSET_VALUE: u64 = 1000;
 const MSECS_CYCLES: u64 = 10_000;
+
+const UART_INT: u32 = 10;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -91,12 +94,23 @@ extern "C" fn m_trap_handler(epc: usize,
             },
             7 => {
                 // Machine timer
-                println!("Machine timer interrupt CPU#{}", hart);
                 schedule_mtime_interrupt(TIMER_OFFSET_VALUE);
             },
             11 => {
-                // Machine external (interrupt from Platform Interrupt Controller (PLIC))
-                println!("Machine external interrupt CPU#{}", hart);
+                // Machine external interrupt
+                if let Some(interrupt) = plic::next_interrupt() {
+                    // Ocurrió una interrupción en el Claim register
+                    match interrupt {
+                        UART_INT => {
+                            let uart = Uart::new(0x1000_0000);
+                            read_uart(&uart);
+                        },
+                        _ => {
+                            println!("Unknown interrupt: {}", interrupt);
+                        },
+                    }
+                    plic::complete(interrupt);
+                }
             },
             _ => {
                 panic!("Unhandled async trap CPU#{} -> {}\n", hart, cause_num);

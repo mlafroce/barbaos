@@ -1,5 +1,6 @@
 use crate::{print, println};
 use crate::devices::uart::Uart;
+use crate::cpu::plic;
 
 use super::page_table::{PageTable, PAGE_SIZE};
 
@@ -221,10 +222,12 @@ impl MapTable {
         // UART
         self.range_map(0x1000_0000, 0x1000_0000,
                      EntryBits::ReadWrite.val());
+        // TODO Ver qué son estas direcciones
         self.range_map(0x8009_3000, 0x8009_3000,
                      EntryBits::ReadWrite.val());
         self.range_map(0x8009_4000, 0x8009_4000,
                      EntryBits::ReadWrite.val());
+        plic::map_pages(self);
         self.test_init_map();
     }
 

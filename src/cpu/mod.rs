@@ -1,4 +1,5 @@
 pub mod trap;
+pub mod plic;
 
 pub fn mscratch_write(val: usize) {
     unsafe {
