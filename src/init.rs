@@ -5,9 +5,11 @@ use crate::devices::uart_16550::Uart;
 use crate::mmu::map_table::MapTable;
 use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
+use crate::system::process;
 use crate::{kmain, mmu};
 use crate::{print, println};
 use alloc::boxed::Box;
+use core::arch::asm;
 use core::ptr::{null, null_mut};
 
 pub static mut KMAP_TABLE: *mut MapTable = null_mut();
@@ -50,6 +52,24 @@ unsafe extern "C" fn supervisor_mode_init() -> ! {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn user_mode_init(process_pc: usize, sp: usize) -> ! {
+    // bits[11::12] = 0 -> Usermode
+    let status = (1 << 7) | (1 << 5) | (0b01 << 13);
+    let interrupts = 0xa0a;
+    let delegate_mask = (1 << 1) | (1 << 5) | (1 << 9);
+    riscv64::mstatus_write(status);
+    riscv64::mepc_write(process_pc);
+    riscv64::mie_write(interrupts);
+    riscv64::mideleg_write(delegate_mask);
+    riscv64::enable_pmp();
+    riscv64::sfence_vma();
+    // Salimos en modo Usuario!
+    asm!("mv sp, {}", in(reg) sp, options(nomem, nostack));
+    riscv64::mret();
+    unreachable!();
+}
+
+#[no_mangle]
 pub extern "C" fn kinit() {
     let dtb_address = unsafe { DTB_ADDRESS };
     let dtb = DtbReader::new(dtb_address).unwrap();
@@ -80,15 +100,25 @@ pub extern "C" fn kinit() {
     // test_main();
     mmu::print_mem_info();
     page_table.print_allocations();
+    mmu::print_mem_info();
+    println!("\x1b[1m<Finish>\x1b[0m");
+    #[cfg(test)]
+    test_main();
+    let mut map_table;
     if let Some(page_table) = unsafe { GLOBAL_PAGE_TABLE.as_ref() } {
-        let mut map_table = Box::new(MapTable::new(page_table));
+        map_table = Box::new(MapTable::new(page_table));
         page_table.print_allocations();
         unsafe { map_table.init_map() };
-        let satp = map_table.get_initial_satp();
-        unsafe { riscv64::satp_write(satp) };
         TrapFrame::init(map_table.as_mut());
-        unsafe { KMAP_TABLE = Box::into_raw(map_table) };
+        unsafe {
+            let satp = map_table.get_initial_satp(0);
+            riscv64::satp_write(satp);
+            KMAP_TABLE = Box::into_raw(map_table);
+        };
     }
     mmu::print_mem_info();
     println!("\x1b[1m<Finish>\x1b[0m");
+    if let Some(page_table) = unsafe { GLOBAL_PAGE_TABLE.as_ref() } {
+        process::init(page_table)
+    }
 }

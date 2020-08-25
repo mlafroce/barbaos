@@ -45,11 +45,12 @@ impl TrapFrame {
 
     /// inicializa el trap frame del hart 0
     pub fn init(map_table: &mut MapTable) {
+        let _satp = map_table.get_initial_satp(0);
         let frame;
         unsafe {
             frame = &mut KERNEL_TRAP_FRAME[0];
         }
-        frame.satp = map_table.get_initial_satp();
+        frame.satp = map_table.get_initial_satp(0);
         // El scratch apunta al contexto de mi frame
         let scratch_val = frame as *const TrapFrame as usize;
         unsafe { riscv64::mscratch_write(scratch_val) };
