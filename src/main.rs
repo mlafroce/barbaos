@@ -25,6 +25,8 @@ mod cpu;
 mod devices;
 mod init;
 mod mmu;
+mod system;
+
 #[cfg(test)]
 mod test;
 mod utils;
@@ -44,6 +46,9 @@ extern "C" fn kmain() {
     use crate::assembly::riscv64::wfi;
     use crate::cpu::riscv64::plic;
     println!("\x1b[1m[kmain start]\x1b[0m");
+    mmu::print_mem_info();
+    //mscratch_read(); //-> tira instruction fault
+    //sscratch_read(); // OK porque estoy en supervisor
     println!("Setting up interrupts and PLIC...");
     // We lower the threshold wall so our interrupts can jump over it.
     plic::set_threshold(0);
