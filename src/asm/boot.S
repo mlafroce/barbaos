@@ -49,10 +49,12 @@ _start:
   csrw    mie, t3
   // Ya configuramos las interrupciones, ahora podemos salir hacia el final de este código.
   // Configuramos la dirección de salida en `ra`, cuando salga va a estar en modo supervisor.
-  la      ra, supervisor_mode
+  la      ra, after_kinit
   // mret actualiza `mstatus` y sale de una excepción. En nuestro caso, asigna `ra` a nuestro program counter
   mret
-supervisor_mode:
+after_kinit:
+
+  // Ya configuramos las interrupciones, ahora podemos salir hacia el final de este código.
   // Una vez que termina el kinit, vengo para acá
   // armo el registro `sstatus` (supervisor status)
   // 1 << 8 : Supervisor's previous protection mode -> 1 (SPP=1 [Supervisor]).
@@ -60,11 +62,8 @@ supervisor_mode:
   // 1 << 1 : Supervisor's interrupt-enable bit -> 1 después de sret.
   // armamos el estado "previo" que es el que sret va a restaurar
   // li      t0, (1 << 8) | (1 << 5)
-  li      t0, (0b01 << 11) | (1 << 7) | (1 << 5)
+  li      t0, (0b00 << 11) | (1 << 7) | (1 << 5)
   csrw    mstatus, t0
-  // Cargamos la dirección de `kmain`
-  la      t1, kmain
-  csrw    mepc, t1
   // mideleg (Machine Interrupt delegate)
   // Las interrupciones, por defecto, elevan el privilegio a nivel M
   // Delegamos las interrupciones al nivel de supervisor (ver configuración de reg `mie`)
@@ -84,8 +83,10 @@ supervisor_mode:
   // Ahora que tenemos todo configurado en memoria principal, forzamos una sincronización 
   // de memoria para asegurarnos que el MMU no agarre valores cacheados
   //sfence.vma
-  // Salimos en modo supervisor
-  // sret
+  // Salimos en modo Usuario!
+  // Ya no vamos más a kmain, ahora vamos al proceso init, que está en a0
+  csrw  mepc, a0
+  la    ra, loop_forever
   mret
 secondary_harts:
   // Acá van los otros nucleos esperando a ser despertados por una interrupción de soft.

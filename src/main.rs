@@ -20,6 +20,10 @@ mod cpu;
 mod devices;
 mod handlers;
 mod mmu;
+mod system;
+
+#[macro_use]
+mod macros;
 
 #[cfg(test)]
 mod test;
@@ -32,8 +36,7 @@ use devices::uart::Uart;
 use handlers::abort;
 use mmu::page_table::PageTable;
 use mmu::map_table::MapTable;
-#[macro_use]
-mod macros;
+use system::process;
 
 
 /// Función principal del kernel
@@ -41,7 +44,7 @@ static mut KMAP_TABLE: *mut MapTable = null_mut();
 
 #[no_mangle]
 extern "C"
-fn kinit() {
+fn kinit() -> usize {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(0x1000_0000);
     uart.init();
@@ -60,9 +63,10 @@ fn kinit() {
         TrapFrame::init(map_table);
         println!("map_table_page: {:p}", KMAP_TABLE);
     }
-    map_table.update_satp();
+    map_table.update_satp(0);
     schedule_mtime_interrupt(20);
     cpu::mscratch_read();
+    process::init()
 }
 
 #[no_mangle]

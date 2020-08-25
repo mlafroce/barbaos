@@ -4,6 +4,8 @@ use crate::cpu::plic;
 
 use super::page_table::{PageTable, PAGE_SIZE};
 
+const SATP_MODE_SV39: usize = 8 << 60;
+
 #[repr(i64)]
 #[derive(Copy, Clone)]
 #[allow(dead_code)]
@@ -20,7 +22,10 @@ pub enum EntryBits {
 
     ReadWrite = 1 << 1 | 1 << 2,
     ReadExecute = 1 << 1 | 1 << 3,
-    ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3
+    ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3,
+
+    UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,
+    UserReadExecute = 1 << 1 | 1 << 3 | 1 << 4,
 }
 
 impl EntryBits {
@@ -239,8 +244,8 @@ impl MapTable {
     pub unsafe fn test_init_map(&self) {
         let entry_address = &self.entries as *const _ as usize;
         let addresses = [
-            (super::TEXT_START + 0x3200, "text_start"), (super::TEXT_END, "text_end"),
             (super::RODATA_START, "rodata_start"), (super::RODATA_END, "rodata_end"), 
+            (super::TEXT_START, "text_start"), (super::TEXT_END, "text_end"),
             (super::DATA_START, "data_start"), (super::DATA_END, "data_end"),
             (super::BSS_START, "bss_start"), (super::BSS_END, "bss_end"),
             (super::KERNEL_STACK_START, "kernel_stack_start"), (super::KERNEL_STACK_END, "ks_end"),
@@ -257,14 +262,15 @@ impl MapTable {
     /// * 4 bits de modo
     /// * 16 del address space identifier (ASID)
     /// * 44 de la dirección física de la raiz de la tabla de paginación (PPN)
-    pub fn get_initial_satp(&self) -> usize {
+    pub fn get_initial_satp(&self, asid: u16) -> usize {
         let phys_addr = self as *const MapTable;
         let root_ppn = (phys_addr as i64) >> 12;
-        8 << 60 | root_ppn as usize
+        let asid_bits = (asid as usize) << 44;
+        SATP_MODE_SV39 | asid_bits | root_ppn as usize
     }
 
-    pub fn update_satp(&self) {
-        let satp_val = self.get_initial_satp();
+    pub fn update_satp(&self, asid: u16) {
+        let satp_val = self.get_initial_satp(asid);
         unsafe {
             llvm_asm!("csrw satp, $0" :: "r"(satp_val));
         }

@@ -43,7 +43,7 @@ impl TrapFrame {
 
     /// inicializa el trap frame del hart 0
     pub fn init(map_table: &mut MapTable) {
-        let satp = map_table.get_initial_satp();
+        let satp = map_table.get_initial_satp(0);
         let frame;
         unsafe {
             frame = &mut KERNEL_TRAP_FRAME[0];

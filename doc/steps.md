@@ -172,3 +172,15 @@ Para lanzar una interrupción periódicamente, leemos el contenido de `mtime`, l
 RISCV utiliza un controlador llamado **PLIC** (*Platform level interrupt controller*). Este controlador se utiliza para atender interrupciones externas. Como utilizamos Qemu sólo nos interesa las interrupciones de UART. Configuramos el id correspondiente al UART realizamos una lectura del dispositivo cada vez que recibimos un llamada.
 
 Como ahora nuestra entrada depende de una interrupción, quitamos el busy loop de kmain y llamamos a `abort` para que nos dirija a un *wait for interrupt*. Podemos ver como baja enormemente el consumo de CPU con la nueva forma de ingresar caracteres.
+
+
+## Procesos
+
+¡Nos vamos al modo usuario!
+
+Creamos un struct `Process` con componentes básicos de un proceso: un frame con el estado de los registros y el *SATP*, stack, entre otros. El stack del proceso, un program counter inicial del proceso, el id del proceso (pid), una tabla de paginación para mapear la memoria, y el estado del proceso.
+
+Creamos un frame para correr un proceso, el proceso `init()`. Por ahora, como no tenemos nada mapeado, nos limitamos a hacer un loop vacío. Al proceso le pasamos la dirección de una función de rust nuestra, pero mapeada a una dirección de memoria virtual elegida por nosotros.
+Quitamos la función `kmain`, ya que ahora vamos a iniciar el proceso en modo usuario. 
+
+En `trap.rs` agregamos que, antes de atender una interrupción, que actualice el stack pointer, al del stack.
