@@ -253,3 +253,15 @@ De acuerdo a la sección 3.1 de la especificación de VirtIO, para configurar un
 
 Para leer (o escribir) un bloque de datos, encolamos un `Request`
 Creamos una instancia de esta estrutura, como está descripto en la sección *Device Operation*. Pasamos la dirección de la misma al `addr` del Descriptor, y lo asignamos en la VirtQueue.
+
+
+## Procesos
+
+¡Nos preparamos para el modo usuario!
+
+Creamos un struct `Process` con componentes básicos de un proceso: un frame con el estado de los registros y el *SATP*, stack, entre otros. El stack del proceso, un program counter inicial del proceso, el id del proceso (pid), una tabla de paginación para mapear la memoria, y el estado del proceso.
+
+Creamos un frame para correr un proceso, el proceso `init()`. Por ahora, como no tenemos nada mapeado, nos limitamos a hacer un loop vacío. Al proceso le pasamos la dirección de una función de rust nuestra, pero mapeada a una dirección de memoria virtual elegida por nosotros.
+Quitamos la función `kmain`, ya que ahora vamos a iniciar el proceso en modo usuario. 
+
+En `trap.rs` agregamos que, antes de atender una interrupción, que actualice el stack pointer, al del stack.
