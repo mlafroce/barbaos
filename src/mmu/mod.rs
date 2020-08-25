@@ -8,8 +8,8 @@ pub mod map_table;
 pub mod riscv64;
 
 extern "C" {
-    static TEXT_START: usize;
-    static TEXT_END: usize;
+    pub static TEXT_START: usize;
+    pub static TEXT_END: usize;
     static DATA_START: usize;
     static DATA_END: usize;
     static RODATA_START: usize;

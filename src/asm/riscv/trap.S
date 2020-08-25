@@ -70,7 +70,10 @@ m_trap_vector:
     csrr    a3, mhartid
     csrr    a4, mstatus
     mv      a5, t5
-    ld      sp, 520(a5)
+
+    // Uso stack global del kernel
+    la      t0, KERNEL_STACK_END
+    ld      sp, 0(t0)
     call    m_trap_handler
 
     // `m_trap_handler` devuelve un entero `usize`, el mismo se encuentra

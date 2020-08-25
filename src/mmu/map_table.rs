@@ -2,6 +2,7 @@ use super::riscv64::{PageTable, PAGE_SIZE};
 use crate::cpu::riscv64::plic;
 use crate::{print, println};
 
+use crate::assembly::riscv64;
 use core::ptr::NonNull;
 use core::slice::from_raw_parts_mut;
 
@@ -24,6 +25,9 @@ pub enum EntryBits {
     ReadWrite = 1 << 1 | 1 << 2,
     ReadExecute = 1 << 1 | 1 << 3,
     ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3,
+
+    UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,
+    UserReadExecute = 1 << 1 | 1 << 3 | 1 << 4,
 }
 
 impl EntryBits {
@@ -292,10 +296,11 @@ impl<'a> MapTable<'a> {
     pub unsafe fn test_init_map(&self) {
         let entry_address = &self.entries as *const _ as usize;
         let addresses = [
-            (super::TEXT_START, "text_start"),
-            (super::TEXT_END, "text_end"),
+            (0x80006df8, "core::fmt::write"),
             (super::RODATA_START, "rodata_start"),
             (super::RODATA_END, "rodata_end"),
+            (super::TEXT_START, "text_start"),
+            (super::TEXT_END, "text_end"),
             (super::DATA_START, "data_start"),
             (super::DATA_END, "data_end"),
             (super::BSS_START, "bss_start"),
@@ -324,11 +329,18 @@ impl<'a> MapTable<'a> {
     /// * 4 bits de modo
     /// * 16 del address space identifier (ASID)
     /// * 44 de la dirección física de la raiz de la tabla de paginación (PPN)
-    pub fn get_initial_satp(&self) -> usize {
-        let asid = 1;
+    pub fn get_initial_satp(&self, asid: u16) -> usize {
         let phys_addr = self as *const MapTable;
         let root_ppn = (phys_addr as i64) >> 12;
-        let asid_bits = asid << 44;
+        let asid_bits = (asid as usize) << 44;
         SATP_MODE_SV39 | asid_bits | root_ppn as usize
+    }
+
+    pub fn update_satp(&self, asid: u16) {
+        let satp = self.get_initial_satp(asid);
+        unsafe {
+            riscv64::satp_write(satp);
+            riscv64::satp_fence_asid(asid as usize);
+        }
     }
 }

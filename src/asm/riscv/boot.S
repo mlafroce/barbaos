@@ -39,6 +39,7 @@ _start:
   // Configuración inicial del modo máquina
   jal       machine_mode_init
   j         supervisor_mode_init
+
 secondary_harts:
   // Acá van los otros nucleos esperando a ser despertados por una interrupción de soft.
   // A este tipo de interrupciones se lo llama SIPI (Software Intra-Processor Interrupt).
