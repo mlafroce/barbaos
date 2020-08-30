@@ -16,7 +16,7 @@ pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
 /// de las mismas
 /// N = Tam Heap / Tam Página (usamos páginas de 4096 bytes)
 /// M = N / Tam Página
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PageTable {
     heap_start: usize,
     heap_size: usize,

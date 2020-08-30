@@ -1,6 +1,7 @@
 use super::riscv64::{PageTable, PAGE_SIZE};
 use crate::cpu::riscv64::plic;
 use crate::{print, println};
+use core::fmt::{Debug, Formatter};
 
 use crate::assembly::riscv64;
 use core::ptr::NonNull;
@@ -185,11 +186,6 @@ impl<'a> MapTable<'a> {
                 let offset_mask = (1 << (12 + i * 9)) - 1;
                 let page_offset = vaddr & offset_mask;
                 let phys_addr = ((cur_table.get_entry() << 2) as usize) & !offset_mask;
-                println!(
-                    "Entry_table {:x}: {:x}",
-                    (cur_table.entry << 2) as usize & !offset_mask,
-                    (cur_table.entry & EntryBits::Execute.val())
-                );
                 return Some(phys_addr | page_offset);
             } else {
                 // Si no es hoja, ingresamos a la rama como en `map`
@@ -342,5 +338,11 @@ impl<'a> MapTable<'a> {
             riscv64::satp_write(satp);
             riscv64::satp_fence_asid(asid as usize);
         }
+    }
+}
+
+impl Debug for MapTable<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{{ page_table: {:?} }}", self.page_table)
     }
 }
