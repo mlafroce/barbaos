@@ -89,7 +89,7 @@ pub unsafe fn sfence_vma() {
 }
 #[inline]
 pub unsafe fn stvec_write(value: usize) {
-    asm!("csrw mtvec, {}", in(reg) value, options(nostack))
+    asm!("csrw stvec, {}", in(reg) value, options(nostack))
 }
 #[inline]
 pub unsafe fn wfi() {

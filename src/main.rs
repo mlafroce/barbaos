@@ -30,8 +30,8 @@ mod system;
 mod test;
 mod utils;
 
-use crate::devices::shutdown;
 use core::ptr::null;
+use devices::shutdown;
 
 use crate::devices::virtio::block_device::test_disk;
 use devices::virtio::probe;

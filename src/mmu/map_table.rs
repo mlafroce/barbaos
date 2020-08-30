@@ -185,11 +185,6 @@ impl<'a> MapTable<'a> {
                 let offset_mask = (1 << (12 + i * 9)) - 1;
                 let page_offset = vaddr & offset_mask;
                 let phys_addr = ((cur_table.get_entry() << 2) as usize) & !offset_mask;
-                println!(
-                    "Entry_table {:x}: {:x}",
-                    (cur_table.entry << 2) as usize & !offset_mask,
-                    (cur_table.entry & EntryBits::Execute.val())
-                );
                 return Some(phys_addr | page_offset);
             } else {
                 // Si no es hoja, ingresamos a la rama como en `map`

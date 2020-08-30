@@ -3,6 +3,7 @@ use crate::cpu::riscv64::plic;
 use crate::devices::uart_16550::{read_uart, Uart};
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{MTIMECMP_ADDRESS, MTIME_ADDRESS, PAGE_SIZE};
+use crate::system::syscall::execute_syscall;
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::mem::size_of;
@@ -18,7 +19,7 @@ const MSECS_CYCLES: u64 = 10_000;
 const UART_INT: u32 = 10;
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 /// # Trap Frame
 /// Representa los registros almacenados cada vez que caemos en el `asm_trap_vector`
 /// De esta forma, cada vez que ocurre un riscv64, guardamos el estado de la CPU, realizamos
@@ -78,11 +79,8 @@ extern "C" fn m_trap_handler(
     cause: usize,
     hart: usize,
     _status: usize,
-    _frame: &mut TrapFrame,
+    frame: &mut TrapFrame,
 ) -> usize {
-    // We're going to handle all traps in machine mode. RISC-V lets
-    // us delegate to supervisor mode, but switching out SATP (virtual memory)
-    // gets hairy.
     let is_async = cause >> 63 & 1 == 1;
     // The cause contains the type of riscv64 (sync, async) as well as the cause
     // number. So, here we narrow down just the cause number.
@@ -146,6 +144,7 @@ extern "C" fn m_trap_handler(
             8 => {
                 // Environment (system) call from User mode
                 println!("E-call from User mode! CPU#{} -> 0x{:08x}", hart, epc);
+                execute_syscall(frame, epc);
                 return_pc += 4;
             }
             9 => {
