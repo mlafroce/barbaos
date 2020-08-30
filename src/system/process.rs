@@ -3,12 +3,12 @@
 //! de un programa que queremos ejecutar
 use crate::assembly::riscv64;
 use crate::cpu::riscv64::trap::TrapFrame;
-use crate::devices::shutdown;
 use crate::init::user_mode_init;
 use crate::mmu;
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{PageTable, PAGE_ORDER, PAGE_SIZE};
-use crate::mmu::SIFIVE_TEST_ADDRESS;
+use crate::system::syscall;
+use crate::system::syscall::{REBOOT_MAGIC_1, REBOOT_MAGIC_2};
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::mem::MaybeUninit;
@@ -34,6 +34,7 @@ pub enum ProcessState {
 /// * root: tabla de mapeo de memoria
 /// * state: estado del proceso
 #[repr(C)]
+#[derive(Debug)]
 pub struct Process<'a> {
     frame: TrapFrame,
     stack: NonNull<u8>,
@@ -130,17 +131,10 @@ pub static mut INIT_PROCESS: Option<Box<Process>> = None;
 /// Llama a `launch_init_process` que a su vez llama a `launch_user_process`
 pub fn init(page_table: &'static PageTable) {
     let mut init_process = Process::create(page_table);
-    // Temp: mapeo dirección de dispositivo de shutdown.
-    init_process.map_memory(
-        SIFIVE_TEST_ADDRESS,
-        SIFIVE_TEST_ADDRESS,
-        EntryBits::UserReadWrite.val(),
-        0,
-    );
     // Mapeo la dirección de mi proceso en memoria
-    // FIX ME?  Mapeo todo el text area porque no conozco las dependencias de mi función init
+    // FIX ME?  Mapeo text + data + rodata area porque no conozco las dependencias de mi función init
     let text_start = unsafe { mmu::TEXT_START };
-    let text_end = unsafe { mmu::TEXT_END };
+    let text_end = unsafe { mmu::RODATA_END };
     for addr in (text_start..text_end + PAGE_SIZE).step_by(PAGE_SIZE) {
         init_process.map_memory(
             PROCESS_STARTING_ADDR + addr - text_start,
@@ -161,6 +155,7 @@ pub fn init(page_table: &'static PageTable) {
     let text_start_page = (text_start >> PAGE_ORDER) << PAGE_ORDER;
     init_process.program_counter = func_addr - text_start_page + PROCESS_STARTING_ADDR;
     println!("func address: {:x}", func_addr);
+    println!("program counter: {:x}", init_process.program_counter);
     println!(
         "phys address: {:x}",
         init_root_ref
@@ -181,5 +176,17 @@ fn launch_init_process() {
 }
 
 fn init_function() {
-    shutdown();
+    let msg = "Write desde init function!";
+    let write_syscall = syscall::Syscall::Write {
+        fd: 0,
+        buf: msg.as_ptr(),
+        n_bytes: msg.len(),
+    };
+    write_syscall.call();
+    let shutdown_syscall = syscall::Syscall::Reboot {
+        magic1: REBOOT_MAGIC_1,
+        magic2: REBOOT_MAGIC_2,
+        poweroff: true,
+    };
+    shutdown_syscall.call();
 }
