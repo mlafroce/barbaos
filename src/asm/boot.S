@@ -86,7 +86,9 @@ after_kinit:
   // Salimos en modo Usuario!
   // Ya no vamos más a kmain, ahora vamos al proceso init, que está en a0
   csrw  mepc, a0
+  // Y como el stack está mapeado en el rango 1_0000_0000 ~ 1_0000_2000, voy a tener que actualizarlo
   la    ra, loop_forever
+  li    sp, 0x100002000
   mret
 secondary_harts:
   // Acá van los otros nucleos esperando a ser despertados por una interrupción de soft.

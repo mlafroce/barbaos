@@ -7,6 +7,7 @@ use crate::cpu;
 use crate::cpu::trap::TrapFrame;
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::page_table::{PAGE_SIZE, PageTable};
+use crate::system::syscall;
 
 /// # Estados del proceso
 /// Enumerado con los estados básicos en los que puede estar un proceso.
@@ -26,13 +27,12 @@ pub enum ProcessState {
 /// * pid: identificador único del proceso
 /// * root: tabla de mapeo de memoria
 /// * state: estado del proceso
-#[repr(C)]
 pub struct Process {
     frame:           TrapFrame,
     stack:           *mut u8,
     program_counter: usize,
     pid:             u16,
-    root:            *mut MapTable,
+    pub root:            *mut MapTable,
     state:           ProcessState,
 }
 
@@ -86,13 +86,18 @@ impl Process {
           0,
       );
     }
-    // Map the program counter on the MMU
-    root_table.map(
-        PROCESS_STARTING_ADDR,
-        func_addr,
-        EntryBits::UserReadExecute.val(),
-        0,
-    );
+    // Mapeo la dirección de mi proceso en memoria
+    // (mas o menos entra en 6 páginas)
+    for i in 0..9 {
+        let addr = i * PAGE_SIZE;
+        root_table.map(
+            PROCESS_STARTING_ADDR + addr,
+            func_addr + addr,
+            EntryBits::UserReadExecute.val(),
+            0,
+        );
+    }
+    // Mapeo la dirección de la función 
     root_table.update_satp(process.pid);
     process
     }
@@ -113,12 +118,13 @@ impl Drop for Process {
 
 /// Rust me exige que inicialice todas las variables estáticas
 /// Usando un `Option` hago una suerte de lazy init
-static mut INIT_PROCESS: Option<Process> = None;
+pub static mut INIT_PROCESS: Option<Process> = None;
 
 /// Crea el proceso `init`, el proceso que será el padre de todos
 /// Devuelve el valor del Program counter del proceso
 pub fn init() -> usize {
     let init_process = Process::new_default(init_function);
+    println!("init_process root: {:x}", init_process.root as usize);
     let init_root_ref: &mut MapTable;
     unsafe {
         init_root_ref = &mut (*init_process.root);
@@ -129,11 +135,17 @@ pub fn init() -> usize {
     // sale hacer una chanchada
     let func_addr = init_function as *const () as usize;
     let func_virt_addr = PROCESS_STARTING_ADDR + func_addr % PAGE_SIZE;
+    let syscall_addr = syscall::Syscall::call as *const () as usize;
     println!("func address: {:x}", func_addr);
+    println!("write_syscall address: {:x}", syscall_addr);
     println!("phys address: {:x}", init_root_ref.virt_to_phys(func_virt_addr).unwrap());
     func_virt_addr
 }
 
 fn init_function () {
-    loop {}
+    loop {
+        let msg = "Write desde init function!";
+        let write_syscall = syscall::Syscall::Write{fd: 0, buf: msg.as_ptr(), n_bytes: msg.len()};
+        write_syscall.call(); 
+    }
 }

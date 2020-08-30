@@ -7,6 +7,7 @@ use crate::mmu::map_table::MapTable;
 use crate::mmu::map_table::EntryBits;
 use crate::mmu::{MTIME_ADDRESS, MTIMECMP_ADDRESS};
 use crate::{print, println};
+use crate::system::syscall::execute_syscall;
 
 /// Trap Frames para cada núcleo (8 núcleos en total)
 pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] =
@@ -38,7 +39,7 @@ impl TrapFrame {
                     fregs: [0; 32],
                     satp: 0,
                     trap_stack: null_mut(),
-                     hartid: 0 }
+                    hartid: 0 }
     }
 
     /// inicializa el trap frame del hart 0
@@ -131,6 +132,7 @@ extern "C" fn m_trap_handler(epc: usize,
             8 => {
                 // Environment (system) call from User mode
                 println!("E-call from User mode! CPU#{} -> 0x{:08x}", hart, epc);
+                execute_syscall(frame, epc);
                 return_pc += 4;
             },
             9 => {
