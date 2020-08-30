@@ -30,7 +30,7 @@ unsafe extern "C" fn supervisor_mode_init() -> ! {
     // armamos el estado "previo" que es el que sret va a restaurar
     let status = (0b11 << 11) | (1 << 7) | (1 << 5);
     // Habilito las interrupciones en modo Supervisor
-    let interrupts = 0xaaa;
+    let interrupts = 0xa0a;
     // mideleg (Machine Interrupt delegate)
     // Las interrupciones, por defecto, elevan el privilegio a nivel M
     // Delegamos las interrupciones al nivel de supervisor
@@ -44,7 +44,7 @@ unsafe extern "C" fn supervisor_mode_init() -> ! {
     riscv64::mepc_write(kmain as *const () as usize);
     riscv64::mie_write(interrupts);
     riscv64::mideleg_write(delegate_mask);
-    riscv64::stvec_write(m_trap_vector as *const () as usize);
+    riscv64::mtvec_write(m_trap_vector as *const fn() as usize);
     riscv64::enable_pmp();
     riscv64::sfence_vma();
     // Salimos en modo supervisor!
@@ -62,6 +62,7 @@ pub unsafe extern "C" fn user_mode_init(process_pc: usize, sp: usize) -> ! {
     riscv64::mepc_write(process_pc);
     riscv64::mie_write(interrupts);
     riscv64::mideleg_write(delegate_mask);
+    riscv64::mtvec_write(m_trap_vector as *const fn() as usize);
     riscv64::enable_pmp();
     riscv64::sfence_vma();
     // Salimos en modo Usuario!
