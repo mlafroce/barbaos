@@ -4,6 +4,7 @@ pub use raspi2b::*;
 #[cfg(target_arch = "riscv64")]
 pub use riscv::*;
 
+#[cfg(target_arch = "riscv64")]
 pub mod riscv {
     pub const UART_ADDRESS: usize = 0x1000_0000;
 
@@ -15,6 +16,7 @@ pub mod riscv {
 
 /// Using bcm2835_wdt mechanism from
 /// https://github.com/intel/idxd-driver/blob/master/drivers/watchdog/bcm2835_wdt.c
+#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
 pub mod raspi2b {
     pub const UART_ADDRESS: usize = 0x3f20_1000;
     const WATCHDOG_ADDRESS: usize = 0x3f10_0000;

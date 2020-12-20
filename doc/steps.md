@@ -71,7 +71,7 @@ cargo run -- -s -S
 
 El primer "-s" es para que se levante un servidor de gdb en el puerto :1234, el segundo, "-S", es para que el kernel no arranque hasta que se le de la orden desde el monitor / cliente gdb.
 
-### Tests
+### Tests con python
 
 Con este kernel vacío lo único que podemos hacer es ejecutarlo. Escribimos un test para probar que podemos levantar una instancia de QEmu y matarla.
 
@@ -114,4 +114,15 @@ Escribimos una función `shutdown` que nos permita apagar la máquina virtual y 
 
 Creamos un dispositivo *UART*. Para esto, sabiendo que QEMU designa la posición de memoria *0x1000_0000* para virtualizar un dispositivo NS16550 "instanciamos" uno en nuestro kmain para informar sobre la ejecución del kernel.
 
-En nuestras pruebas podemos agregarle la opción `stdout=PIPE` a nuestro proceso de QEmu para poder leer la salida del kernel y compararla contra nuestras pruebas.
+En nuestras pruebas en python vamos a agregarle la opción `stdout=PIPE` a nuestro proceso de QEmu para poder leer la salida del kernel y compararla contra nuestras pruebas
+
+
+## Tests en Rust
+
+Rust tiene un framework de test incorporado al sistema de compilación, sin embargo este necesita de la biblioteca `std` para poder ejecutarse. Por suerte podemos utilizar nuestro propio "framework" de pruebas. Para esto definimos una función como `test_runner`, la cual compilamos únicamente si estamos corriendo tests.
+
+Al declarar nuestro *runner*, se creará automáticamente una función "`main`" que llamará a nuestro wrapper. Podemos renombrar esta función configurando el `reexport_test_harness_main`
+
+Una vez configurados los wrappers de nuestras pruebas, hacemos una llamada al *harness* desde nuestro `kmain`.
+
+Por el momento esto nos puede ayudar a ejecutar tests sencillos, aunque deberá ser remodelado cuando se separe el modo máquina del modo supervisor / usuario.

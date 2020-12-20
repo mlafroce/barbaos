@@ -1,5 +1,8 @@
+#[cfg(any(target_arch = "arm", target_arch = "armv7a"))]
+use crate::assembly::armv7a::wfi;
+#[cfg(target_arch = "riscv64")]
+use crate::assembly::riscv64::wfi;
 use crate::{print, println};
-use core::arch::asm;
 
 /// Función utilizada para mecanismos de falla (como el `panic!`)
 #[no_mangle]
@@ -29,7 +32,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 pub extern "C" fn abort() -> ! {
     loop {
         unsafe {
-            asm!("wfi");
+            wfi();
         }
     }
 }
