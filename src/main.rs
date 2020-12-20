@@ -10,72 +10,19 @@
 #![feature(
     global_asm,
     llvm_asm,
-    panic_info_message)]
+    panic_info_message,
+    custom_test_frameworks)]
+#![test_runner(crate::test::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
-pub mod assembly;
-pub mod devices;
+mod assembly;
+mod devices;
+mod handlers;
+mod test;
+
 use devices::uart::Uart;
-
-/// Override de las macros de Rust
-#[macro_export]
-macro_rules! print
-{
-    ($($args:tt)+) => ({
-        use core::fmt::Write;
-        let _ = write!(Uart::new(0x1000_0000), $($args)+);
-    });
-}
-
-/// Imprime una linea y un salto de linea al final (o una linea vacía)
-#[macro_export]
-macro_rules! println
-{
-    () => ({
-        print!("\r\n")
-    });
-    ($fmt:expr) => ({
-        print!(concat!($fmt, "\r\n"))
-    });
-    ($fmt:expr, $($args:tt)+) => ({
-        print!(concat!($fmt, "\r\n"), $($args)+)
-    });
-}
-
-/// Función utilizada para mecanismos de falla (como el `panic!`)
-#[no_mangle]
-extern "C" fn eh_personality() {}
-
-/// Esta función es llamada cuando explota todo, como el catch final de
-/// un try catch de C++
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    print!("Aborting: ");
-    if let Some(p) = info.location() {
-        println!(
-                    "line {}, file {}: {}",
-                    p.line(),
-                    p.file(),
-                    info.message().unwrap()
-        );
-    }
-    else {
-        println!("no information available.");
-    }
-    abort();
-}
-
-/// Una vez que `panic!` imprimió el error, aborto, llamando a la instrucción
-/// `wfi`, *Wait for interrupt*
-#[no_mangle]
-extern "C"
-fn abort() -> ! {
-    loop {
-        unsafe {
-            llvm_asm!("wfi"::::"volatile");
-        }
-    }
-}
-
+#[macro_use]
+mod macros;
 
 
 #[no_mangle]
@@ -84,5 +31,7 @@ fn kmain() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(0x1000_0000);
     uart.init();
+    #[cfg(test)]
+    test_main();
     println!("Hello Rust!");
 }
