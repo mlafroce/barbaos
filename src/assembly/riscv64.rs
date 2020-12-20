@@ -51,6 +51,11 @@ pub unsafe fn mret() {
     asm!("mret", options(nomem, nostack))
 }
 
+#[inline]
+pub unsafe fn wfi() {
+    asm!("wfi", options(nomem, nostack))
+}
+
 extern "C" {
     fn m_trap_vector();
 }

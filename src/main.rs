@@ -7,10 +7,13 @@
 //! Debido a su uso de assembly sólo está permitido compilarlo en nightly
 #![no_main]
 #![no_std]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::utils::test::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
-pub mod assembly;
-pub mod devices;
-pub mod utils;
+mod assembly;
+mod devices;
+mod utils;
 
 use devices::shutdown;
 use devices::uart_16550::Uart;
@@ -21,6 +24,8 @@ extern "C" fn kmain() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(UART_ADDRESS);
     uart.init();
+    #[cfg(test)]
+    test_main();
     println!("Hello Rust!");
     shutdown();
 }
