@@ -1,10 +1,3 @@
-// Assembly-level trap handler.
-// m_trap_vector va a ser nuestra "función" para atender 
-// interrupciones en modo máquina
-.section .text
-.global m_trap_vector
-
-m_trap_vector:
 // trap.S
 // Trap handler and global context
 // Steve Operating System
@@ -32,12 +25,15 @@ m_trap_vector:
 .endm
 
 
+// Assembly-level trap handler.
+// m_trap_vector va a ser nuestra "función" para atender
+// interrupciones en modo máquina
 .section .text
-.global asm_trap_vector
+.global m_trap_vector
 // Debe estar alineado ya que los 2 bits menos significativos
 // de mtvec no forman parte de la dirección
 .align 4 
-asm_trap_vector:
+m_trap_vector:
     // Copiamos todos los registros del frame actual, primero copiamos
     // mscratch como si fuera un stack pointer de esta función
     csrrw   t6, mscratch, t6

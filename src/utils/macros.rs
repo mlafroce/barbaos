@@ -3,7 +3,7 @@
 macro_rules! print
 {
     ($($args:tt)+) => ({
-        use $crate::Uart;
+        use $crate::devices::Uart;
         use $crate::devices::UART_ADDRESS;
         use core::fmt::Write;
         let _ = write!(Uart::new(UART_ADDRESS), $($args)+);

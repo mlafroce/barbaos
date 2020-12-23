@@ -166,9 +166,23 @@ Rust nos exige un allocator global para poder hacer uno particular. Utilizamos e
 
 En Rust 2024 el uso de variables static mut está deprecado, por lo que usamos un UnsafeCell para tener nuestra clase con mutabilidad interna.
 
+
 ## Interrupciones
 
 Lo primero que hacemos es completar nuestra función `asm_trap_vector`, en la que ahora hacemos una copia de todos los registros y el registro de control y status (CSR) `mscratch`. Una vez que copiamos al stack todos nuestros registros, saltamos a la función `m_trap_handler` para analizar el motivo de la interrupción.
 Por el momento sólo adelantamos el *program counter* o ejecutamos un *panic!* según el motivo. Una vez que imprimimos el motivo de nuestra interrupción, volvemos a la ejecución
 
 **IMPORTANTE**: hay que tener en cuenta que, si estamos sobre una instrucción comprimida, al sumar 4 al *program counter* podemos caer sobre una instrucción no alineada. Esto rompería con la ejecución de nuestro sistema. Sin embargo, más adelante veremos que, en vez de adelantar el *program counter*, podemos llamar a funciones más específicas para este tipo de situaciones.
+
+
+### Interrupciones del timer
+
+Para que el timer interno lance interrupciones tenemos que usar dos posiciones de memoria:
+
+* `mtime`: dirección del reloj interno del sistema.
+
+* `mtimecmp`: dirección con un tiempo que será comparado contra `mtime`, cuando el tiempo sea el mismo, se lanza una interrupción.
+
+Para lanzar una interrupción periódicamente, leemos el contenido de `mtime`, le sumamos un valor *delta* y lo almacenamos en la dirección `mtimecmp`.
+
+Estas interrupciones seran de utilidad para implementar multi-tasking
