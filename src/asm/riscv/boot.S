@@ -36,7 +36,8 @@ _start:
   li        t0, KERNEL_STACK_SIZE
   add       sp, t1, t0
   // Configuración inicial del modo máquina
-  j         machine_mode_init
+  jal       machine_mode_init
+  j         kmain_init
 secondary_harts:
   // Acá van los otros nucleos esperando a ser despertados por una interrupción de soft.
   // A este tipo de interrupciones se lo llama SIPI (Software Intra-Processor Interrupt).
