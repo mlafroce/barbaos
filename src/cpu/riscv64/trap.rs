@@ -1,5 +1,6 @@
 use crate::assembly::riscv64::mscratch_write;
 use crate::mmu::riscv64::PAGE_SIZE;
+use crate::mmu::{MTIMECMP_ADDRESS, MTIME_ADDRESS};
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::ptr::null_mut;
@@ -7,6 +8,9 @@ use core::ptr::null_mut;
 /// Trap Frames para cada núcleo (8 núcleos en total)
 /// TODO: Fix!
 pub static mut KERNEL_TRAP_FRAME: [TrapFrame; 8] = [TrapFrame::new(); 8];
+
+pub const TIMER_OFFSET_VALUE: u64 = 1000;
+const MSECS_CYCLES: u64 = 10_000;
 
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -80,6 +84,7 @@ extern "C" fn m_trap_handler(
             7 => {
                 // Machine timer
                 println!("Machine timer interrupt CPU#{}", hart);
+                schedule_mtime_interrupt(TIMER_OFFSET_VALUE);
             }
             11 => {
                 // Machine external (interrupt from Platform Interrupt Controller (PLIC))
@@ -152,4 +157,15 @@ extern "C" fn m_trap_handler(
     };
     // Finally, return the updated program counter
     return_pc
+}
+
+/// Asigna un valor al registro `mtimecmp` relativo al tiempo actual
+/// Se lanza una interrupcción luego de `msecs` milisegundos
+pub fn schedule_mtime_interrupt(msecs: u64) {
+    let mtimecmp = MTIMECMP_ADDRESS as *mut u64;
+    let mtime = MTIME_ADDRESS as *const u64;
+    unsafe {
+        let next_interrupt = mtime.read_volatile().wrapping_add(msecs * MSECS_CYCLES);
+        mtimecmp.write_volatile(next_interrupt);
+    }
 }
