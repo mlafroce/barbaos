@@ -1,4 +1,4 @@
-use crate::{kmain, DTB_ADDRESS};
+use crate::{kinit, kmain, DTB_ADDRESS};
 use core::arch::{asm, global_asm};
 
 // Assembly imports module
@@ -73,23 +73,36 @@ extern "C" fn machine_mode_init(_hart_id: usize, dtb_address: *const u8) {
     // Configuramos mstatus: https://ibex-core.readthedocs.io/en/latest/cs_registers.html#machine-status-mstatus
     // Bits 12:11 -> MPP, machine previous privilege. 11 para modo M
     let status = 0b11 << 11;
-    // Interrupciones habilitadas:
-    // 1 << 3: software interrupts `irq_software_i`
-    // 1 << 7: timer interrupts `irq_timer_i`
-    // 1 << 11: externa interrupts `irq_extenal_i`
-    let interrupts = (1 << 3) | (1 << 7) | (1 << 11);
     // Cargo dirección de memoria de kinit
-    let init_addr = kmain as *const () as usize;
+    let init_addr = kinit as *const () as usize;
     unsafe {
         DTB_ADDRESS = dtb_address;
         mstatus_write(status);
         // Valor de retorno al hacer mret (retorno de excepción)
         mepc_write(init_addr);
+        // mret actualiza `mstatus` y sale de una excepción. En nuestro caso, asigna `mepc` a nuestro program counter
+        mret();
+    }
+}
+
+#[no_mangle]
+extern "C" fn kmain_init(_hart_id: usize) {
+    // Bits 12:11 -> MPP, machine previous privilege. 11 para modo M, bit 7 para habilitar interrupts MPIE
+    let status = 0b11 << 11 | 1 << 7;
+    let main_addr = kmain as *const () as usize;
+    // Interrupciones habilitadas:
+    // 1 << 3: software interrupts `irq_software_i`
+    // 1 << 7: timer interrupts `irq_timer_i`
+    // 1 << 11: externa interrupts `irq_extenal_i`
+    let interrupts = (1 << 3) | (1 << 7) | (1 << 11);
+    unsafe {
+        mstatus_write(status);
+        // Valor de retorno al hacer mret (retorno de excepción)
+        mepc_write(main_addr);
         // Configuro la dirección del vector de traps
         mtvec_write(m_trap_vector as *const () as usize);
         // Configuro interrupciones habilitadas
         mie_write(interrupts);
-        // mret actualiza `mstatus` y sale de una excepción. En nuestro caso, asigna `mepc` a nuestro program counter
         mret();
     }
 }

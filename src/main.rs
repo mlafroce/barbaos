@@ -21,22 +21,21 @@ mod mmu;
 mod test;
 mod utils;
 
+use crate::devices::dtb::DtbReader;
+use crate::devices::UART_ADDRESS;
+use crate::devices::{shutdown, Uart};
 use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
 use core::ptr::null;
 use core::sync::atomic::Ordering;
-#[cfg(target_arch = "riscv64")]
-use cpu::riscv64::trap::TrapFrame;
-use devices::dtb::DtbReader;
-use devices::shutdown;
-use devices::Uart;
-use devices::UART_ADDRESS;
 
 static mut DTB_ADDRESS: *const u8 = null();
 
 #[cfg(target_arch = "riscv64")]
 #[no_mangle]
-extern "C" fn kmain() {
+extern "C" fn kinit() {
+    use crate::cpu::riscv64::trap::TrapFrame;
+
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(UART_ADDRESS);
     uart.init();
@@ -62,6 +61,20 @@ extern "C" fn kmain() {
     TrapFrame::init();
     mmu::print_mem_info();
     page_table.print_allocations();
+}
+
+#[cfg(target_arch = "riscv64")]
+#[no_mangle]
+extern "C" fn kmain() {
+    use crate::assembly::riscv64::wfi;
+    use crate::cpu::riscv64::trap::schedule_mtime_interrupt;
+    println!("Scheduling sleep");
+    schedule_mtime_interrupt(200);
+    println!("Waiting interrupt...");
+    unsafe {
+        wfi();
+    }
+    println!("Exit");
     shutdown();
 }
 
