@@ -7,6 +7,7 @@
 //! Debido a su uso de assembly sólo está permitido compilarlo en nightly
 #![no_main]
 #![no_std]
+#![allow(dead_code)]
 #![feature(custom_test_frameworks, allocator_api)]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
@@ -68,8 +69,8 @@ extern "C" fn kinit() {
 #[no_mangle]
 extern "C" fn kmain() {
     use crate::assembly::riscv64::wfi;
+    use crate::cpu::riscv64::plic;
     use crate::cpu::riscv64::trap::schedule_mtime_interrupt;
-    use cpu::riscv64::plic;
     println!("Scheduling sleep");
     schedule_mtime_interrupt(200);
     println!("Waiting interrupt...");

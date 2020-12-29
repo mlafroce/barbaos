@@ -4,6 +4,7 @@
 use crate::{print, println};
 use core::sync::atomic::{AtomicUsize, Ordering};
 
+pub mod map_table;
 pub mod riscv64;
 
 extern "C" {

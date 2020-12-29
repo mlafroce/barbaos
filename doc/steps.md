@@ -193,3 +193,28 @@ Estas interrupciones seran de utilidad para implementar multi-tasking
 RISCV utiliza un controlador llamado **PLIC** (*Platform level interrupt controller*). Este controlador se utiliza para atender interrupciones externas. Como utilizamos QEmu sólo nos interesa las interrupciones de UART. Configuramos el id correspondiente al UART realizamos una lectura del dispositivo cada vez que recibimos un llamada.
 
 Ahora que nuestra entrada depende de una interrupción, podemos quitar el *busy loop* de `kmain` y llamar a `abort`. Esta función ejecuta una instrucción *wait for interrupt*. Podemos ver como baja enormemente el consumo de CPU con la nueva forma de ingresar caracteres.
+
+
+## MMU (sin page faults)
+
+RISC-V es una arquitectura modular, algunas de sus implementaciones son muy similares a las de un microcontrolador: muy pocas instrucciones, sin instrucciones de privilegio y sin MMU. Por este motivo, el MMU es un hardware externo al procesador.
+Cuando el sistema corre en el anillo de seguridad 1 (modo *M*), el de máquina, la *MMU* está desactivada y hacemos uso directo de la memoria.
+Cuando pasamos al anillo 2, el de supervisor, activamos la *MMU*.
+
+La *MMU* se configura con el registro **SATP** (Supervisor Address Translation and Protection). Este registro tiene 3 campos:
+
+* **MODE**: que define el tipo de transformación (0 si se usa memoria física, otros valores según si es RISCV-32 o RISCV-64).
+
+* **ASID**: utilizado para asociar un espacio de memoria (*address space*) a un proceso. Podemos elegir 0 y recargar toda la TLB, o usar algo único como el PID para solo recargar si es necesario.
+
+## Modo supervisor
+
+Como indicamos, el módo *Máquina* utiliza memoria física, si queremos usar memoria virtual necesitamos pasar al modo *Supervisor* o *Usuario*. Para esto convertimos nuestra función *kmain* en *kinit*, donde se inicializan los dispositivos, paginación de memoria y memoria virtual. Una vez inicializado devolvemos el valor del registro `satp`. Este registro posee la ubicación (alineada a una página de memoria) de la raiz de nuestro **TLB**, como se describió anteriormente. Se configura este registro y se hace un retorno de interrupción para pasar al modo supervisor.
+
+Una vez configurada la MMU, este modo *Supervisor* puede trabajar con memoria virtual. Como las configuraciones trabajadas hasta ahora fueron realizadas en modo *máquina*, debemos configurar la tabla de mapeo de memoria de las regiones accedidas.
+Es necesario configurar la TLB para acceder a la memoria con las instrucciones, dispositivos, etc. De lo contrario sucederá un *Page Fault*, y al no tener interrupciones configuradas, nuestro kernel quedará loopeando infinitamente.
+
+
+### Memoria virtual
+
+Agregamos la clase `MapTable`, que tendrá la lógica de como llenar las tablas de paginación de RISC-V. Esto es necesario para salir del modo *máquina*

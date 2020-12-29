@@ -147,7 +147,16 @@ impl PageTable {
         }
     }
 
-    #[allow(dead_code)]
+    /// Devuelve la cantidad de páginas necesarias para cubrir ese rango de memoria
+    pub fn pages_needed(start: usize, end: usize) -> usize {
+        (round_up(end, 12) - round_up(start, 12)) / PAGE_SIZE + 1
+    }
+
+    /// Devuelve la cantidad de páginas correspondientes al heap
+    pub fn get_heap_pages_len(&self) -> usize {
+        self.heap_size / PAGE_SIZE
+    }
+
     pub fn print_allocations(&self) {
         unsafe {
             let num_pages = self.heap_size / (PAGE_SIZE + 1);

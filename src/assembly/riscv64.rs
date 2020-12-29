@@ -60,6 +60,10 @@ pub unsafe fn mret() {
     asm!("mret", options(nomem, nostack))
 }
 #[inline]
+pub unsafe fn satp_write(value: usize) {
+    asm!("csrw satp, {}", in(reg) value, options(nostack))
+}
+#[inline]
 pub unsafe fn wfi() {
     asm!("wfi", options(nomem, nostack))
 }
