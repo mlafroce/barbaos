@@ -3,6 +3,7 @@
 //! Por el momento sólo implementamos la parte de paginación
 use crate::{print, println};
 
+pub mod map_table;
 pub mod riscv64;
 
 extern "C" {
