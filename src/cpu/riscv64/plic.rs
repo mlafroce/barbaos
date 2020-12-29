@@ -4,6 +4,8 @@
 //! Utilizaremos el PLIC para atender interrupciones del UART, basándonos en la
 //! documentación de QEmu y SiFive
 
+use crate::mmu::map_table::{EntryBits, MapTable};
+
 const PLIC_INT_BASE: usize = 0x0C00_0000;
 const PLIC_PRIORITY: usize = PLIC_INT_BASE;
 const PLIC_INT_ENABLE: usize = PLIC_INT_BASE + 0x2000;
@@ -73,4 +75,21 @@ pub fn complete(id: u32) {
         // puede diferenciar si estamos escribiendo o leyendo
         complete_reg.write_volatile(id);
     }
+}
+
+/// Recibe una tabla de mapeo y agrega las direcciones de memoria usadas
+pub fn map_pages(table: &mut MapTable) {
+    table.map(PLIC_INT_BASE, PLIC_INT_BASE, EntryBits::ReadWrite.val(), 0);
+    table.map(
+        PLIC_INT_ENABLE,
+        PLIC_INT_ENABLE,
+        EntryBits::ReadWrite.val(),
+        0,
+    );
+    table.map(
+        PLIC_THRESHOLD,
+        PLIC_THRESHOLD,
+        EntryBits::ReadWrite.val(),
+        0,
+    );
 }
