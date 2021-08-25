@@ -223,3 +223,33 @@ Luego de la versión 6.0 de Qemu, es mandatoria la configuración de estos regis
 ### Memoria virtual
 
 Agregamos la clase `MapTable`, que tendrá la lógica de como llenar las tablas de paginación de RISC-V. Esto es necesario para salir del modo *máquina*
+
+
+## Dispositivos E/S
+
+Dado que estamos desarrollando sobre **QEMU**, escribimos un driver básico para dispositivos de entrada y salida. La meta es crear un driver para poder leer un "disco externo" y poder comunicar nuestro S.O. con el host.
+
+Podemos observar las direcciones de los dispositivos disponibles ejecutando `ctrl + a, c` en Qemu para abrir la consola, y luego ejecutar `info qtree`
+
+Utilizamos el protocolo de VirtIO. Escaneamos las direcciones de memoria de estos dispositivos (`0x1000_1000` a `0x1000_8000`) e identificamos dispositivos montados en el emulador.
+
+En particular nos interesa saber que su *magic number* es `virt` y nos interesan los dispositivos de tipo bloque (es decir, 2).
+
+### Inicialización de dispositivos
+
+De acuerdo a la sección 3.1 de la especificación de VirtIO, para configurar un dispositivo tenemos los siguientes pasos:
+
+1. Escribir el status `RESET`
+2. Escribir el status `ACKNOWLEDGE`
+3. Escribir el status `DRIVER`
+4. Leer bits de features, validar cuáles pueden ser aceptados. Ofrecer mis features escribiendo en el registro de guest features
+5. Escribir el status `FEATURES_OK` para contrastar los features del host con el guest.
+6. Leer y validar que el status siga siendo `FEATURES_OK`.
+7. Configuración especifica del driver
+8. Escribir el estado `DRIVER_OK`
+
+
+### Lectura de bloques
+
+Para leer (o escribir) un bloque de datos, encolamos un `Request`
+Creamos una instancia de esta estrutura, como está descripto en la sección *Device Operation*. Pasamos la dirección de la misma al `addr` del Descriptor, y lo asignamos en la VirtQueue.

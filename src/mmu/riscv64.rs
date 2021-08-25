@@ -7,7 +7,7 @@ use core::slice::from_raw_parts_mut;
 pub const MTIME_ADDRESS: usize = 0x0200_bff8;
 pub const MTIMECMP_ADDRESS: usize = 0x0200_4000;
 
-const PAGE_ORDER: usize = 12;
+pub const PAGE_ORDER: usize = 12;
 
 pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
 
@@ -111,7 +111,6 @@ impl PageTable {
         None
     }
 
-    #[allow(dead_code)]
     pub fn zalloc(&self, pages: usize) -> Option<NonNull<u8>> {
         let allocated = self.alloc(pages);
         if let Some(data) = allocated {
