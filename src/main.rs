@@ -7,8 +7,13 @@
 //! Debido a su uso de assembly sólo está permitido compilarlo en nightly
 #![no_main]
 #![no_std]
-#![allow(dead_code)]
-#![feature(custom_test_frameworks, allocator_api)]
+#![allow(dead_code, incomplete_features)]
+#![feature(
+    custom_test_frameworks,
+    allocator_api,
+    adt_const_params,
+    generic_const_exprs
+)]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
@@ -26,6 +31,8 @@ mod utils;
 use crate::devices::shutdown;
 use core::ptr::null;
 
+use crate::devices::virtio::block_device::test_disk;
+use devices::virtio::probe;
 use init::KMAP_TABLE;
 
 static mut DTB_ADDRESS: *const u8 = null();
@@ -43,11 +50,17 @@ extern "C" fn kmain() {
     // UART0 = 10
     // PCIE = [32..35]
     // Enable the UART interrupt.
-    plic::enable(10);
-    plic::set_priority(10, 1);
+    for i in 1..=10 {
+        plic::enable(i);
+        plic::set_priority(i, 1);
+    }
     unsafe {
         let table_ptr = &*(KMAP_TABLE);
         println!("map_table_page: {:p}", table_ptr);
+    }
+    let mut devices = probe();
+    if let Some(disk) = devices.iter_mut().flatten().next() {
+        test_disk(disk, 13);
     }
     println!("Press any key...");
     unsafe {

@@ -128,10 +128,17 @@ extern "C" fn m_trap_handler(
                     hart, epc, tval
                 );
             }
+            5 => {
+                //
+                panic!(
+                    "Load Access Fault CPU#{} -> 0x{:08x}: 0x{:08x}\n",
+                    hart, epc, tval
+                );
+            }
             7 => {
                 // Illegal instruction
                 panic!(
-                    "Store/AMO Access Fault#{} -> 0x{:08x}: 0x{:08x}\n",
+                    "Store/AMO Access Fault CPU#{} -> 0x{:08x}: 0x{:08x}\n",
                     hart, epc, tval
                 );
             }
