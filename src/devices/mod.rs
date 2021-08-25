@@ -13,6 +13,7 @@ pub mod uart_16550;
 pub use raspi2b::*;
 
 pub const UART_ADDRESS: usize = 0x1000_0000;
+pub mod virtio;
 
 pub fn shutdown() {
     let address = SIFIVE_TEST_ADDRESS as *mut u32;

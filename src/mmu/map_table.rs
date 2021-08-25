@@ -269,6 +269,11 @@ impl<'a> MapTable<'a> {
             EntryBits::ReadWrite.val(),
             0,
         );
+        self.range_map(
+            super::VIRTIO_ADDRESS,
+            super::VIRTIO_ADDRESS + 8 * 0x1000,
+            EntryBits::ReadWrite.val(),
+        );
         // UART
         self.range_map(0x1000_0000, 0x1000_0000, EntryBits::ReadWrite.val());
         let self_addr = self as *const _ as usize;
@@ -287,7 +292,7 @@ impl<'a> MapTable<'a> {
     pub unsafe fn test_init_map(&self) {
         let entry_address = &self.entries as *const _ as usize;
         let addresses = [
-            (super::TEXT_START + 0x3500, "text_start"),
+            (super::TEXT_START, "text_start"),
             (super::TEXT_END, "text_end"),
             (super::RODATA_START, "rodata_start"),
             (super::RODATA_END, "rodata_end"),
@@ -300,14 +305,17 @@ impl<'a> MapTable<'a> {
             (super::HEAP_START, "heap_start"),
             (entry_address, "entry_address"),
             (super::riscv64::MTIME_ADDRESS, "mtime address"),
-            (0x80006df8, "core::fmt::write"),
+            (0x1000_9000, "VirtIO last address"),
         ];
         for address in &addresses {
-            let phys = self.virt_to_phys(address.0).unwrap();
-            println!(
-                "Test walk {:20}: {:#x} -> {:#x}",
-                address.1, address.0, phys
-            );
+            if let Some(phys) = self.virt_to_phys(address.0) {
+                println!(
+                    "Test walk {:20}: {:#x} -> {:#x}",
+                    address.1, address.0, phys
+                );
+            } else {
+                panic!("{}: {:#x} wasn't mapped!", address.1, address.0)
+            }
         }
     }
 
