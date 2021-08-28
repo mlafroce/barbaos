@@ -7,9 +7,11 @@
 //! Debido a su uso de assembly sólo está permitido compilarlo en nightly
 #![no_main]
 #![no_std]
-#![feature(custom_test_frameworks)]
+#![feature(custom_test_frameworks, allocator_api)]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+
+extern crate alloc;
 
 mod assembly;
 mod devices;
@@ -18,6 +20,7 @@ mod mmu;
 mod test;
 mod utils;
 
+use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
 use core::ptr::null;
 use core::sync::atomic::Ordering;
@@ -25,7 +28,6 @@ use devices::dtb::DtbReader;
 use devices::shutdown;
 use devices::Uart;
 use devices::UART_ADDRESS;
-use mmu::riscv64::PageTable;
 
 static mut DTB_ADDRESS: *const u8 = null();
 
@@ -34,8 +36,6 @@ extern "C" fn kmain() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(UART_ADDRESS);
     uart.init();
-    #[cfg(test)]
-    test_main();
     println!("BarbaOS booting...");
     let dtb_address = unsafe { DTB_ADDRESS };
     let dtb = DtbReader::new(dtb_address).unwrap();
@@ -48,6 +48,9 @@ extern "C" fn kmain() {
     // TODO: read addresses from dtb
     let mut page_table = PageTable::new(heap_start, heap_size);
     page_table.init();
+    unsafe { GLOBAL_PAGE_TABLE.set_root(&page_table) };
+    #[cfg(test)]
+    test_main();
     mmu::print_mem_info();
     page_table.print_allocations();
     if let Some(page) = page_table.alloc(1) {

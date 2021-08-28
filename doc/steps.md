@@ -150,3 +150,18 @@ Iteramos la lista de páginas y buscamos una secuencia de N páginas libres. Si 
 ### Dealloc
 
 Implementamos un dealloc para liberar la memoria reservada por `alloc`. Hacemos un chequeo básico de no estar liberando un puntero nulo o un double free.
+
+
+## Global allocator
+
+Rust, de forma similar a C++, maneja sus recursos utilizando el concepto de *Lifetime* y *Scope*.
+Cuando declaramos una variable, la misma va a vivir dentor del *scope* en el que fue declarada, y una vez que el scope termina, la variable se "destruye" y se liberan sus recursos.
+Rust flexibiliza la restricción del *scope* agregando el concepto de **ownership**. Una variable puede ccambiar su *scope* cambiando su *owner*.
+
+Este manejo de recursos nos ayuda a evitar leaks de memoria y punteros "sueltos". Para evitar el uso de punteros sueltos, usamos estructuras como `Vec` y `Box`
+
+Para poder usar estas estructuras, creamos un **Allocator**
+
+Rust nos exige un allocator global para poder hacer uno particular. Utilizamos el mismo para ambos fines y hacemos un test usando la api (actualmente experimental) de *allocators*.
+
+En Rust 2024 el uso de variables static mut está deprecado, por lo que usamos un UnsafeCell para tener nuestra clase con mutabilidad interna.

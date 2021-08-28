@@ -1,4 +1,7 @@
 use crate::{print, println};
+use core::alloc::{AllocError, Allocator, GlobalAlloc, Layout};
+use core::cell::UnsafeCell;
+use core::ptr::{null_mut, NonNull};
 use core::slice::from_raw_parts_mut;
 
 const PAGE_ORDER: usize = 12;
@@ -10,6 +13,7 @@ pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
 /// de las mismas
 /// N = Tam Heap / Tam Página (usamos páginas de 4096 bytes)
 /// M = N / Tam Página
+#[derive(Clone)]
 pub struct PageTable {
     heap_start: usize,
     heap_size: usize,
@@ -38,7 +42,7 @@ struct Page {
 
 impl PageTable {
     /// Constructor
-    pub fn new(heap_start: usize, heap_size: usize) -> Self {
+    pub const fn new(heap_start: usize, heap_size: usize) -> Self {
         let heap_alloc_start = heap_start;
         Self {
             heap_start,
@@ -68,7 +72,7 @@ impl PageTable {
     }
 
     /// Reserva N páginas continuas
-    pub fn alloc(&self, pages: usize) -> Option<*mut u8> {
+    pub fn alloc(&self, pages: usize) -> Option<NonNull<u8>> {
         assert!(pages > 0);
         let num_pages = self.heap_size / PAGE_SIZE;
         // Comienzo del heap, inclueyendo páginas que describen el estado de los allocs
@@ -96,18 +100,20 @@ impl PageTable {
                 }
                 // Devuelvo la página inicial
                 // HEAP_ALLOC_START es el heap _luego_ de las páginas reservadas
-                return Some((self.heap_alloc_start + PAGE_SIZE * first_page) as *mut u8);
+                // Asumimos que nunca puede ser 0
+                let addr = self.heap_alloc_start + PAGE_SIZE * first_page;
+                return unsafe { Some(NonNull::new_unchecked(addr as *mut u8)) };
             }
         }
         None
     }
 
     #[allow(dead_code)]
-    pub fn zalloc(&self, pages: usize) -> Option<*mut u8> {
+    pub fn zalloc(&self, pages: usize) -> Option<NonNull<u8>> {
         let allocated = self.alloc(pages);
         if let Some(data) = allocated {
             unsafe {
-                let pages_slice = from_raw_parts_mut(data, pages * PAGE_SIZE);
+                let pages_slice = from_raw_parts_mut(data.as_ptr(), pages * PAGE_SIZE);
                 for item in &mut pages_slice.iter_mut() {
                     *item = 0;
                 }
@@ -117,27 +123,24 @@ impl PageTable {
     }
 
     /// Libera páginas reservadas
-    #[allow(dead_code)]
-    pub fn dealloc(&self, ptr: *mut u8) {
-        if !ptr.is_null() {
-            let bits_id = (ptr as usize - self.heap_alloc_start) / PAGE_SIZE;
-            assert!(bits_id < self.heap_size);
-            let bits_address = self.heap_start + bits_id;
-            unsafe {
-                let mut cur_page = bits_address as *mut Page;
-                while (*cur_page).is_used() && !(*cur_page).is_last() {
-                    (*cur_page).clear();
-                    cur_page = cur_page.add(1);
-                }
-                // Verificación mínima de double free
-                assert!(
-                    (*cur_page).is_last(),
-                    "Possible double-free detected! (Not taken found before last)"
-                );
-                // If we get here, we've taken care of all previous pages and
-                // we are on the last page.
+    pub fn dealloc(&self, ptr: NonNull<u8>) {
+        let bits_id = (ptr.as_ptr() as usize - self.heap_alloc_start) / PAGE_SIZE;
+        assert!(bits_id < self.heap_size);
+        let bits_address = self.heap_start + bits_id;
+        unsafe {
+            let mut cur_page = bits_address as *mut Page;
+            while (*cur_page).is_used() && !(*cur_page).is_last() {
                 (*cur_page).clear();
+                cur_page = cur_page.add(1);
             }
+            // Verificación mínima de double free
+            assert!(
+                (*cur_page).is_last(),
+                "Possible double-free detected! (Not taken found before last)"
+            );
+            // If we get here, we've taken care of all previous pages and
+            // we are on the last page.
+            (*cur_page).clear();
         }
     }
 
@@ -220,3 +223,71 @@ fn round_up(val: usize, order: usize) -> usize {
     let mask = (1usize << order) - 1;
     (val + mask) & !mask
 }
+
+#[derive(Copy, Clone)]
+pub struct PageAllocator;
+
+unsafe impl GlobalAlloc for PageAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let pages_needed = (layout.size() >> PAGE_ORDER) + 1;
+        if let Some(address) = page_table.alloc(pages_needed) {
+            return address.as_ptr();
+        }
+        null_mut()
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
+        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        if let Some(ptr) = NonNull::new(ptr) {
+            page_table.dealloc(ptr);
+        }
+    }
+}
+
+unsafe impl Allocator for PageAllocator {
+    fn allocate(&self, layout: Layout) -> Result<NonNull<[u8]>, AllocError> {
+        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        let pages_needed = (layout.size() >> PAGE_ORDER) + 1;
+        if let Some(ptr) = page_table.alloc(pages_needed) {
+            let fat_ptr;
+            unsafe {
+                let array = from_raw_parts_mut(ptr.as_ptr(), layout.size());
+                fat_ptr = NonNull::new_unchecked(array as *mut [u8]);
+            }
+            Ok(fat_ptr)
+        } else {
+            Err(AllocError)
+        }
+    }
+
+    unsafe fn deallocate(&self, ptr: NonNull<u8>, _layout: Layout) {
+        let page_table = GLOBAL_PAGE_TABLE.get_page_table();
+        page_table.dealloc(ptr);
+    }
+}
+
+pub struct GlobalPageTable {
+    root: UnsafeCell<PageTable>,
+}
+
+impl GlobalPageTable {
+    const fn empty() -> Self {
+        let root = UnsafeCell::new(PageTable::new(0, 0));
+        Self { root }
+    }
+
+    pub unsafe fn set_root(&self, root: &PageTable) {
+        *self.root.get() = root.clone();
+    }
+
+    fn get_page_table(&self) -> &PageTable {
+        unsafe { &*self.root.get() }
+    }
+}
+
+unsafe impl Sync for GlobalPageTable {}
+
+#[global_allocator]
+pub static PAGE_ALLOCATOR: PageAllocator = PageAllocator {};
+pub static GLOBAL_PAGE_TABLE: GlobalPageTable = GlobalPageTable::empty();
