@@ -1,6 +1,8 @@
-use crate::mmu::riscv64::PageBits;
+use crate::mmu::riscv64::{PageBits, PAGE_ALLOCATOR};
 use crate::mmu::HEAP_START;
 use crate::PageTable;
+use alloc::boxed::Box;
+use core::ptr::NonNull;
 
 /// Tests básicos de alloc y dealloc
 #[test_case]
@@ -44,10 +46,26 @@ fn multiple_alloc() {
     }
     for i in 0..32 {
         unsafe {
-            page_table.dealloc(ptr.add(16 * i * 4096));
+            let ptr = ptr.as_ptr().add(16 * i * 4096);
+            page_table.dealloc(NonNull::new_unchecked(ptr));
         }
     }
     for i in 1..(32 * 16) {
         unsafe { assert_eq!(*((HEAP_START + i) as *const u8), PageBits::Empty.val()) }
     }
+}
+
+/// Test allocator
+#[test_case]
+fn box_test() {
+    {
+        let _boxed = Box::new_in(0, PAGE_ALLOCATOR);
+        unsafe {
+            assert_eq!(
+                *(HEAP_START as *const u8),
+                PageBits::Last.val() | PageBits::Used.val()
+            )
+        }
+    }
+    unsafe { assert_eq!(*(HEAP_START as *const u8), PageBits::Empty.val()) } // Test alloc simple
 }
