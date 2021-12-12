@@ -1,4 +1,4 @@
-use crate::kmain;
+use crate::{kmain, DTB_ADDRESS};
 use core::arch::{asm, global_asm};
 
 // Assembly imports module
@@ -61,7 +61,7 @@ extern "C" {
 }
 
 #[no_mangle]
-extern "C" fn machine_mode_init(_hart_id: usize, _dtb_address: *const u8) {
+extern "C" fn machine_mode_init(_hart_id: usize, dtb_address: *const u8) {
     // Configuramos mstatus: https://ibex-core.readthedocs.io/en/latest/cs_registers.html#machine-status-mstatus
     // Bits 12:11 -> MPP, machine previous privilege. 11 para modo M
     let status = 0b11 << 11;
@@ -73,6 +73,7 @@ extern "C" fn machine_mode_init(_hart_id: usize, _dtb_address: *const u8) {
     // Cargo dirección de memoria de kinit
     let init_addr = kmain as *const () as usize;
     unsafe {
+        DTB_ADDRESS = dtb_address;
         mstatus_write(status);
         // Valor de retorno al hacer mret (retorno de excepción)
         mepc_write(init_addr);

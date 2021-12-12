@@ -1,3 +1,4 @@
+pub mod dtb;
 pub mod uart_16550;
 #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
 pub use raspi2b::*;
