@@ -8,11 +8,10 @@
 .global _start
 
 // Inicializar registros y frames de la CPU
-// QEmu nos indica cuál es la dirección de inicio de la memoria en `a0` y la dirección del DTB en `a1`
-// Más adelante utilizaremos el DTB para obtener información del hardware disponible
+// QEmu nos indica el hart_id en `a0` y la dirección del DTB en `a1`
 // En QEmu 5.0 la dirección del DTB coincide con el final del heap
 _start: 
-  // Lee el ID de la cpu
+  // Leo el hart_id de la cpu en t0 (no es muy necesario ya que a0 lo tiene... pero por las dudas)
   csrr    t0, mhartid
   // Si es distinto de 0, se va al final
   bnez    t0, secondary_harts
@@ -29,7 +28,7 @@ _start:
   la      t1, _bss_end
   bgeu    t0, t1, 2f // si BSS.start es igual BSS.end salteo la inicialización
 1:
-  sd      zero, (a0) // inicializo BSS.start en 0
+  sd      zero, (t0) // inicializo BSS.start en 0
   addi    t0, t0, 8  // avanzo el puntero
   bltu    t0, t1, 1b // mientras BSS.start != BSS.end repito
 2:

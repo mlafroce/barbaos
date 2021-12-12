@@ -126,3 +126,7 @@ Al declarar nuestro *runner*, se creará automáticamente una función "`main`" 
 Una vez configurados los wrappers de nuestras pruebas, hacemos una llamada al *harness* desde nuestro `kmain`.
 
 Por el momento esto nos puede ayudar a ejecutar tests sencillos, aunque deberá ser remodelado cuando se separe el modo máquina del modo supervisor / usuario.
+
+## Recorrido del DTB
+
+Agregamos en el arranque un parseo básico del *device tree*, con el que imprimimos información básica del CPU y memoria ram.
