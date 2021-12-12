@@ -42,8 +42,8 @@ _start:
 	cmp r4, r9
 	blo 1b
 
-	// Call kernel_main
-	ldr r3, =kmain
+	// Call machine_init
+	ldr r3, =machine_init
 	blx r3
 
 	// halt

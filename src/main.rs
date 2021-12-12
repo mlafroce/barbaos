@@ -15,9 +15,13 @@ mod assembly;
 mod devices;
 mod utils;
 
+use core::ptr::null;
+use devices::dtb::DtbReader;
 use devices::shutdown;
 use devices::uart_16550::Uart;
 use devices::UART_ADDRESS;
+
+static mut DTB_ADDRESS: *const u8 = null();
 
 #[no_mangle]
 extern "C" fn kmain() {
@@ -26,6 +30,9 @@ extern "C" fn kmain() {
     uart.init();
     #[cfg(test)]
     test_main();
-    println!("Hello Rust!");
+    println!("BarbaOS booting...");
+    let dtb_address = unsafe { DTB_ADDRESS };
+    let dtb = DtbReader::new(dtb_address).unwrap();
+    dtb.print_boot_info();
     shutdown();
 }

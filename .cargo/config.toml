@@ -6,5 +6,5 @@ runner = "qemu-system-riscv64 -machine virt -smp 2 -nographic -serial mon:stdio 
 rustflags = ['-Clink-arg=-Tsrc/lds/riscv64gc.lds']
 
 [target.armv7a-none-eabi]
-runner = "qemu-system-arm -machine raspi2b -nographic -serial mon:stdio -kernel "
+runner = "qemu-system-arm -machine raspi2b -nographic -serial mon:stdio -dtb dtb/bcm2836-rpi-2-b.dtb -kernel "
 rustflags = ['-Clink-arg=-Tsrc/lds/armv7a.lds']
