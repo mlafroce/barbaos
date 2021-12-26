@@ -265,3 +265,76 @@ Creamos un frame para correr un proceso, el proceso `init()`. Por ahora, como no
 Quitamos la función `kmain`, ya que ahora vamos a iniciar el proceso en modo usuario. 
 
 En `trap.rs` agregamos que, antes de atender una interrupción, que actualice el stack pointer, al del stack.
+
+
+## Cargar un ELF
+
+En los sistemas unix, el formato ELF (*Executable and Linkable Format*) es el formato más utilizado para almacenar ejecutables. 
+Vamos a crear un ELF, que cargaremos en memoria, para ejecutar en modo usuario.
+
+Lo primero que vamos a crear es una carpeta `user` para nuestras aplicaciones, en esta carpeta vamos a incluir código y scripts de las aplicaciones a correr a nivel usuario.
+
+Dado que la ABI de C es más simple y sus ejecutables tienen menor overhead, empezamos haciendo un "Hola mundo" muy crudo utilizando las syscalls existentes.
+
+### Pasos previos a armar una *libc*
+
+En los sistemas tipo unix existe una biblioteca llamada *libc*, que, en conjunto con otras importantes como *libm* o *libpthread*, implementan lo que se conoce como la **biblioteca standard de C**.
+
+Esta biblioteca posee funciones muy comunes como "printf" o "strcpy". Algunas de estas funciones casi se mapean de forma directa contra las syscalls.
+
+Existen varias implementaciones de la biblioteca standard, como la GNU libc (glibc), musl, uClibc, Newlib, o incluso uno mismo puede crearse su propia libc.
+
+Per antes de aventurar en el mundo de las bibliotecas, hay que armar una interfaz de syscalls para comunicarse correctamente con el kernel
+
+Refactorizamos el módulo de syscalls: creamos un archivo `src/system/syscall/sys.rs` que será la raiz de nuestra biblioteca libsys.
+Separamos nuestro archivo syscall.rs en `api.rs`, que contiene declaraciones de constantes y las llamadas a syscalls.
+
+Luego generamos la biblioteca estática libsys, ejecutando
+
+```bash
+ mv libsys.a user/
+```
+
+Generamos una API para código C, que posteriormente podamos usar con alguna `libc` ya existente.
+
+```bash
+cbindgen src/system/syscall/sys.rs -o user/syscall.h -c cbindgen.toml
+```
+
+Es posible que en el header generado no se encuentre el tipo `uintptr_t`, para lo que hacemos un
+```c
+typedef unsigned long int uintptr_t;
+```
+
+También puede ser útil eliminar las llaves del bloque `extern "C"`
+
+### Hello world desde un ELF externo
+
+Creamos un archivo hello.c con el siguiente contenido:
+```c
+#include "syscall.h"
+
+int main() {
+	call_arg_3(SYS_WRITE, 1, "Hello\n", 6);
+	call_arg_2(SYS_REBOOT, REBOOT_MAGIC_1, REBOOT_MAGIC_2);
+	return 0;
+}
+```
+
+Lo compilamos sin bibliotecas standard, sólo linkeamos contra nuestra *libsys*, para ejecutar syscalls
+
+```bash
+riscv64-unknown-elf-gcc -nostdlib -Wl,-Ttext=0x20000000 hello.c libsys.a -o hello
+```
+
+Finalmente modificamos nuestro proceso init para que inicie desde otra posición de memoria.
+En el siguiente comando, indicamos que vamos a usar un "loader" para cargar en memoria el contenido del binario `user/hello`
+
+```
+cargo run -- -device loader,file=./user/hello,addr=0x82000000,force-raw=true
+```
+
+*Nota*: además de los pasos anteriores, se incluyó una interfaz hecha en C para simplificar el analisis del ELF
+
+**Importante**: el formato ELF describe cómo se distribuyen las secciones en memoria, el valor inicial del program counter, entre otros datos.
+Dado que estamos ignorando este contenido, es importante respetar el orden de los objetos compilados, ya que esto determina cómo se ordenan en la sección ".text" del ELF. Lo más correcto es utilizar un cargador de archivos ELF.
