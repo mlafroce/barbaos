@@ -1,6 +1,10 @@
 # Archivos de compilación de rust
 /target
 
+# Otros archivos compilados
+*.o
+*.a
+
 # Imagen de disco rígido
 hdd.img
 
@@ -9,3 +13,7 @@ python/__pycache__
 
 # IDE
 .idea
+
+# Userland
+user/hello
+user/syscall.h

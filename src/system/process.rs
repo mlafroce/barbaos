@@ -4,11 +4,8 @@
 use crate::assembly::riscv64;
 use crate::cpu::riscv64::trap::TrapFrame;
 use crate::init::user_mode_init;
-use crate::mmu;
 use crate::mmu::map_table::{EntryBits, MapTable};
-use crate::mmu::riscv64::{PageTable, PAGE_ORDER, PAGE_SIZE};
-use crate::system::syscall;
-use crate::system::syscall::{REBOOT_MAGIC_1, REBOOT_MAGIC_2};
+use crate::mmu::riscv64::{PageTable, PAGE_SIZE};
 use crate::{print, println};
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
@@ -52,6 +49,8 @@ const STACK_PAGES: usize = 2;
 /// Técnicamente mi proceso puede estar ubicado en cualquier lugar
 /// ¡es memoria virtual!
 const PROCESS_STARTING_ADDR: usize = 0x2000_0000;
+const EXTERNAL_ELF_START: usize = 0x8200_1000;
+const EXTERNAL_ELF_END: usize = 0x8200_2000;
 /// Dónde arranca el stack (recordar que va de arriba hacia abajo)
 pub const STACK_ADDR: usize = 0x1_0000_0000;
 
@@ -151,9 +150,8 @@ pub static INIT_PROCESS: InitProcess = InitProcess {
 pub fn init(page_table: &'static PageTable) {
     let mut init_process = Process::create(page_table);
     // Mapeo la dirección de mi proceso en memoria
-    // FIX ME? Mapeo text + data + rodata area porque no conozco las dependencias de mi función init
-    let text_start = unsafe { mmu::TEXT_START };
-    let text_end = unsafe { mmu::RODATA_END };
+    let text_start = EXTERNAL_ELF_START;
+    let text_end = EXTERNAL_ELF_END;
     for addr in (text_start..text_end + PAGE_SIZE).step_by(PAGE_SIZE) {
         init_process.map_memory(
             PROCESS_STARTING_ADDR + addr - text_start,
@@ -167,14 +165,7 @@ pub fn init(page_table: &'static PageTable) {
         riscv64::mscratch_write(&init_process.frame as *const _ as usize);
         riscv64::satp_fence_asid(init_process.pid as usize);
     }
-    // Bueno, quiero que caiga en init_function, pero como no está alineado
-    // sale hacer una chanchada
-    let func_addr = init_function as *const () as usize;
-    let text_start = unsafe { mmu::TEXT_START };
-    let text_start_page = (text_start >> PAGE_ORDER) << PAGE_ORDER;
-    init_process.program_counter = func_addr - text_start_page + PROCESS_STARTING_ADDR;
-    println!("func address: {:x}", func_addr);
-    println!("program counter: {:x}", init_process.program_counter);
+    init_process.program_counter = PROCESS_STARTING_ADDR;
     println!(
         "phys address: {:x}",
         init_root_ref
@@ -190,20 +181,4 @@ fn launch_init_process() {
     let new_pc = init_process.program_counter;
     let new_sp = init_process.frame.regs[SP_REGISTER];
     unsafe { user_mode_init(new_pc, new_sp) };
-}
-
-fn init_function() {
-    let msg = "Write desde init function!";
-    let write_syscall = syscall::Syscall::Write {
-        fd: 0,
-        buf: msg.as_ptr(),
-        n_bytes: msg.len(),
-    };
-    write_syscall.call();
-    let shutdown_syscall = syscall::Syscall::Reboot {
-        magic1: REBOOT_MAGIC_1,
-        magic2: REBOOT_MAGIC_2,
-        poweroff: true,
-    };
-    shutdown_syscall.call();
 }

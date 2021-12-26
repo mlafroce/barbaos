@@ -3,7 +3,7 @@ use crate::cpu::riscv64::plic;
 use crate::devices::uart_16550::{read_uart, Uart};
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{MTIMECMP_ADDRESS, MTIME_ADDRESS, PAGE_SIZE};
-use crate::system::syscall::execute_syscall;
+use crate::system::syscall::syscall_impl::execute_syscall;
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::mem::size_of;
