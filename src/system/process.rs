@@ -6,6 +6,7 @@ use crate::cpu::riscv64::trap::TrapFrame;
 use crate::init::user_mode_init;
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{PageTable, PAGE_SIZE};
+use crate::system::proto::elf_loader::ElfLoader;
 use crate::{print, println};
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
@@ -35,7 +36,7 @@ pub enum ProcessState {
 pub struct Process<'a> {
     frame: TrapFrame,
     stack: NonNull<u8>,
-    program_counter: usize,
+    pub program_counter: usize,
     pid: u16,
     pub root: &'a mut MapTable<'a>,
     state: ProcessState,
@@ -46,11 +47,7 @@ pub struct Process<'a> {
 const SP_REGISTER: usize = 2;
 /// Por ahora constante, la cantidad de páginas que arman el stack
 const STACK_PAGES: usize = 2;
-/// Técnicamente mi proceso puede estar ubicado en cualquier lugar
-/// ¡es memoria virtual!
-const PROCESS_STARTING_ADDR: usize = 0x2000_0000;
-const EXTERNAL_ELF_START: usize = 0x8200_1000;
-const EXTERNAL_ELF_END: usize = 0x8200_2000;
+const EXTERNAL_ELF_START: usize = 0x8200_0000;
 /// Dónde arranca el stack (recordar que va de arriba hacia abajo)
 pub const STACK_ADDR: usize = 0x1_0000_0000;
 
@@ -148,27 +145,15 @@ pub static INIT_PROCESS: InitProcess = InitProcess {
 /// Crea el proceso `init`, el proceso que será el padre de todos
 /// Llama a `launch_init_process` que a su vez llama a `launch_user_process`
 pub fn init(page_table: &'static PageTable) {
-    let mut init_process = Process::create(page_table);
-    // Mapeo la dirección de mi proceso en memoria
-    let text_start = EXTERNAL_ELF_START;
-    let text_end = EXTERNAL_ELF_END;
-    for addr in (text_start..text_end + PAGE_SIZE).step_by(PAGE_SIZE) {
-        init_process.map_memory(
-            PROCESS_STARTING_ADDR + addr - text_start,
-            addr,
-            EntryBits::UserReadExecute.val(),
-            0,
-        );
-    }
-    let init_root_ref = &mut (*init_process.root);
-    unsafe {
-        riscv64::mscratch_write(&init_process.frame as *const _ as usize);
-        riscv64::satp_fence_asid(init_process.pid as usize);
-    }
-    init_process.program_counter = PROCESS_STARTING_ADDR;
+    let init_process = if let Ok(loader) = ElfLoader::new(EXTERNAL_ELF_START as *const u8) {
+        loader.into_process(page_table).unwrap()
+    } else {
+        panic!("ELF not found")
+    };
     println!(
         "phys address: {:x}",
-        init_root_ref
+        init_process
+            .root
             .virt_to_phys(init_process.program_counter)
             .unwrap()
     );
@@ -180,5 +165,9 @@ fn launch_init_process() {
     let init_process = InitProcess::get_process();
     let new_pc = init_process.program_counter;
     let new_sp = init_process.frame.regs[SP_REGISTER];
-    unsafe { user_mode_init(new_pc, new_sp) };
+    unsafe {
+        riscv64::mscratch_write(&init_process.frame as *const _ as usize);
+        riscv64::satp_fence_asid(init_process.pid as usize);
+        user_mode_init(new_pc, new_sp)
+    };
 }

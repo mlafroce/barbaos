@@ -338,3 +338,10 @@ cargo run -- -device loader,file=./user/hello,addr=0x82000000,force-raw=true
 
 **Importante**: el formato ELF describe cómo se distribuyen las secciones en memoria, el valor inicial del program counter, entre otros datos.
 Dado que estamos ignorando este contenido, es importante respetar el orden de los objetos compilados, ya que esto determina cómo se ordenan en la sección ".text" del ELF. Lo más correcto es utilizar un cargador de archivos ELF.
+
+## Cargador de archivos ELF
+
+Para ejecutar ELFs más complejos correctamente y sin depender de que el azar ordene nuestras funciones de la forma correcta, hacemos un
+cargador de  archivos ELF básico. Este cargador lee los headers del archivo para determinar el *entry point* y las secciones que componen
+nuestra aplicación. Cargamos todas las secciones a un conjunto de páginas reservado por nosotros y paginamos con permisos de ejecución o
+escritura según corresponda. La validación de errores es mínima, se usará un loeader más completo cuando se disponga de una toolchain completa.
