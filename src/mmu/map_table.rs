@@ -9,7 +9,7 @@ use core::slice::from_raw_parts_mut;
 const SATP_MODE_SV39: usize = 8 << 60;
 
 #[repr(i64)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub enum EntryBits {
     None = 0,
@@ -26,6 +26,7 @@ pub enum EntryBits {
     ReadExecute = 1 << 1 | 1 << 3,
     ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3,
 
+    UserRead = 1 << 1 | 1 << 4,
     UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,
     UserReadExecute = 1 << 1 | 1 << 3 | 1 << 4,
 }
