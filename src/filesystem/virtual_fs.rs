@@ -96,7 +96,7 @@ impl VirtualFilesystem {
                 if let Some(device) = DeviceManager::get_device(*device_id) {
                     Ext2FilesystemDriver::new(device, *partition_id)
                 } else {
-                    unimplemented!()
+                    unimplemented!("Device not found")
                 }
             }
             _ => unimplemented!(),
