@@ -16,4 +16,4 @@ python/__pycache__
 
 # Userland
 user/hello
-user/syscall.h
+user/hello-newlib

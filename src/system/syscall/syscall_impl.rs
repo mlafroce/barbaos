@@ -32,7 +32,7 @@ pub fn execute_syscall(frame: &mut TrapFrame, _epc: usize) {
         }
         syscall::SYS_POPMSGBOX => {}
         _ => {
-            unimplemented!()
+            unimplemented!("POPMSGBOX syscall ({}) not implemented", code);
         }
     }
 }
