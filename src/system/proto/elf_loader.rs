@@ -2,7 +2,6 @@ use crate::mmu::map_table::EntryBits;
 use crate::mmu::riscv64::{PageTable, PAGE_ORDER, PAGE_SIZE};
 use crate::system::process::Process;
 use crate::utils::NullTerminatedStr;
-use crate::{print, println};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
@@ -10,7 +9,6 @@ use core::ptr::copy_nonoverlapping;
 
 const MAGIC_SIZE: usize = 4;
 const ENTRY_ADDR_OFFSET: u64 = 24;
-const STRING_TABLE_SECTION: &str = ".shstrtab";
 const SHT_PROGBITS: u32 = 0x1;
 const SHT_STRTAB: u32 = 0x3;
 const SHF_WRITE: u64 = 0x1;
@@ -93,19 +91,16 @@ impl ElfLoader {
             panic!("Empty ELF");
         }
         memory_sections.sort_by(|l, r| l.addr.cmp(&r.addr));
-        memory_sections
-            .iter()
-            .for_each(|sec| println!("Section: {:?}", sec));
         let pages = self.needed_pages(&memory_sections);
         let pages = parent_page_table.zalloc(pages)?;
         let mut current_page: isize = -1;
-        let mut last_end_page = u64::MAX;
+        let mut last_end_page = memory_sections[0].addr;
         for section in memory_sections {
             let section_start_page = section.addr >> PAGE_ORDER;
             let section_end_page = (section.addr + section.size) >> PAGE_ORDER;
-            let mut pages_to_map = section_end_page - section_start_page;
-            if section_start_page != last_end_page {
-                pages_to_map += 1;
+            let clean_page = section_start_page != last_end_page;
+            let section_pages = section_end_page - section_start_page + 1;
+            if clean_page {
                 current_page += 1;
             }
             let dest_offset =
@@ -114,12 +109,12 @@ impl ElfLoader {
                 unsafe {
                     let src = self.base_addr.add(section.offset as usize);
                     let dst = pages.as_ptr().add(dest_offset);
-                    println!("Copying {} bytes from {:?} to {:?}", section.size, src, dst);
                     copy_nonoverlapping(src, dst, section.size as usize);
                 }
             }
             last_end_page = section_end_page;
-            for i in 0..pages_to_map {
+            let map_start = if clean_page { 0 } else { 1 };
+            for i in map_start..section_pages {
                 let virt_page_offset = PAGE_SIZE * i as usize;
                 let vaddr = section.addr as usize + virt_page_offset;
                 let phys_page_offset = PAGE_SIZE * (current_page as usize + i as usize);
@@ -129,14 +124,12 @@ impl ElfLoader {
                 } else if (section.flags & SHF_WRITE) != 0 {
                     EntryBits::UserReadWrite
                 } else {
-                    EntryBits::UserRead
+                    EntryBits::UserReadExecute
                 };
-                println!("Mapping {:x} to {:?} as {:?}", vaddr, paddr, bits);
                 process.map_memory(vaddr, paddr as usize, bits.val(), 0);
             }
-            current_page += pages_to_map as isize;
+            current_page += section_pages as isize - 1;
         }
-
         process.program_counter = self.header.entry as usize;
         Some(process)
     }
@@ -147,7 +140,8 @@ impl ElfLoader {
         for section in sections {
             let section_start_page = section.addr >> PAGE_ORDER;
             let section_end_page = (section.addr + section.size) >> PAGE_ORDER;
-            if section_start_page == last_end_page {
+            let clean = section_start_page == last_end_page;
+            if !clean {
                 counter += 1;
             }
             counter += section_end_page - section_start_page;

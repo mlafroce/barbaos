@@ -82,7 +82,7 @@ impl<'a> Process<'a> {
         }
         // Mapeo el stack en la MMU
         // Inicializo el stack pointer
-        process.frame.regs[SP_REGISTER] = STACK_ADDR + PAGE_SIZE * STACK_PAGES;
+        process.frame.regs[SP_REGISTER] = STACK_ADDR + PAGE_SIZE * STACK_PAGES - 8;
         let saddr = process.stack.as_ptr() as usize;
         // Mapeamos la memoria del stack en la memoria virtual del usuario
         // También mapeamos la dirección de la función que va a ejecutar el proceso
