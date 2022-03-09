@@ -30,9 +30,14 @@ pub fn execute_syscall(frame: &mut TrapFrame, _epc: usize) {
                 shutdown();
             }
         }
-        syscall::SYS_POPMSGBOX => {}
+        syscall::SYS_BRK => {
+            print!("SYS_BRK not implemented, skipping...\n");
+        }
+        syscall::SYS_POPMSGBOX => {
+            unimplemented!("POPMSGBOX syscall ({}) not implemented", code);
+        }
         _ => {
-            unimplemented!()
+            unimplemented!("Unknown syscall: {}", code);
         }
     }
 }

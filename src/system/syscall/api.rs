@@ -4,6 +4,7 @@ pub const REBOOT_MAGIC_1: usize = 0x13011990;
 pub const REBOOT_MAGIC_2: usize = 0xCACAFEAA;
 
 pub const SYS_WRITE: usize = 1;
+pub const SYS_BRK: usize = 12;
 pub const SYS_REBOOT: usize = 48;
 pub const SYS_PUSHMSGBOX: usize = 500;
 pub const SYS_POPMSGBOX: usize = 501;

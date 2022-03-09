@@ -25,7 +25,6 @@ pub enum EntryBits {
 
     ReadWrite = 1 << 1 | 1 << 2,
     ReadExecute = 1 << 1 | 1 << 3,
-    ReadWriteExecute = 1 << 1 | 1 << 2 | 1 << 3,
 
     UserRead = 1 << 1 | 1 << 4,
     UserReadWrite = 1 << 1 | 1 << 2 | 1 << 4,

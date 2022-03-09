@@ -61,7 +61,7 @@ Una vez que está montado podemos darle formato con herramientas como `fdisk` o 
 sudo fdisk /dev/loop42
 ```
 
-Elegimos el comando `g` para crear una tabla de particiones clásica, y `n` para crear una partición.
+Elegimos el comando `o` para crear una tabla de particiones clásica MBR, y `n` para crear una partición.
 Salimos guardando los cambios con `w`.
 
 Podremos observar que se creó un dispositivo loop nuevo para nuestra partición, con el mismo nombre que la anterior + "p1" 

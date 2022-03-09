@@ -5,6 +5,7 @@ use crate::devices::uart_16550::Uart;
 use crate::mmu::map_table::MapTable;
 use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
+use crate::system::process;
 use crate::{kmain, mmu};
 use crate::{print, println};
 use alloc::boxed::Box;
@@ -115,5 +116,5 @@ pub extern "C" fn kinit() {
     };
     mmu::print_mem_info();
     println!("\x1b[1m<Finish>\x1b[0m");
-    //process::init(page_table)
+    process::init(page_table)
 }

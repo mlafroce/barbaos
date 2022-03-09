@@ -151,7 +151,6 @@ extern "C" fn m_trap_handler(
             }
             8 => {
                 // Environment (system) call from User mode
-                println!("E-call from User mode! CPU#{} -> 0x{:08x}", hart, epc);
                 execute_syscall(frame, epc);
                 return_pc += 4;
             }
