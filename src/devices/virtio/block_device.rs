@@ -1,17 +1,22 @@
+use crate::assembly::riscv64::wfi;
 use crate::devices::virtio::common::*;
 use crate::mmu::riscv64::{PAGE_ORDER, PAGE_SIZE};
 use crate::{print, println};
 use alloc::boxed::Box;
-use core::arch::asm;
 use core::mem::{size_of, MaybeUninit};
 use core::ptr::read_volatile;
 
 /// Size of Virtio Queue ring
 const VIRTIO_QUEUE_SIZE: usize = 1 << 7;
 
-#[allow(dead_code)]
+const DESCRIPTOR_HEADER_SIZE: u64 = 16;
+
+struct DeviceBuilder {
+    address: DeviceAddress,
+}
+
 pub struct BlockDevice {
-    address: super::common::DeviceAddress,
+    address: DeviceAddress,
     queue: Box<SplitQueue<VIRTIO_QUEUE_SIZE>>,
     driver_idx: usize,
     device_idx: usize,
@@ -42,17 +47,35 @@ where
     used: QueueUsed<RING_SIZE>,
 }
 
-pub fn test_disk(device: &mut BlockDevice, msg_len: usize) {
-    let mut buffer = [0u8; 512];
-    let request = device.new_request(buffer.as_mut_ptr(), 512, 0, false);
-    while !request.is_finished() {
-        unsafe { asm!("nop") }
-    }
-    println!("Reading from disk:");
-    for c in buffer[0..msg_len].iter() {
-        print!("{}", *c as char);
-    }
-    println!();
+#[repr(C)]
+#[derive(Debug)]
+pub struct Descriptor {
+    pub addr: u64,
+    pub len: u32,
+    pub flags: u16,
+    pub next: u16,
+}
+
+#[repr(C)]
+pub struct QueueAvailable<const RING_SIZE: usize> {
+    pub flags: u16,
+    pub idx: u16,
+    pub ring: [u16; RING_SIZE],
+    pub event: u16,
+}
+
+#[repr(C)]
+pub struct UsedElem {
+    pub id: u32,
+    pub len: u32,
+}
+
+#[repr(C)]
+pub struct QueueUsed<const RING_SIZE: usize> {
+    pub flags: u16,
+    pub idx: u16,
+    pub ring: [UsedElem; RING_SIZE],
+    pub event: u16,
 }
 
 impl BlockDevice {
@@ -106,15 +129,31 @@ impl BlockDevice {
         self.address.read_register(VirtioMmioRegister::DeviceId)
     }
 
+    /// Buffer *must* be multiple of 512 (sector size)
+    pub fn read_sync(&mut self, buffer: &mut [u8], offset: u64) -> Result<(), DeviceError> {
+        if buffer.len() & (0x7F) != 0 {
+            return Err(DeviceError::BufferError);
+        }
+        let request = self.new_request(buffer.as_mut_ptr(), buffer.len(), offset, false);
+        while !request.is_finished() {
+            unsafe { wfi() };
+        }
+        if request.status == 0 {
+            Ok(())
+        } else {
+            Err(DeviceError::IOError)
+        }
+    }
+
     /// Creo un nuevo request en el heap ya que los descriptors necesitan la ubicación del mismo
-    pub fn new_request(
+    fn new_request(
         &mut self,
         buffer: *mut u8,
         size: usize,
-        offset: usize,
+        offset: u64,
         write: bool,
     ) -> Box<BlockRequest> {
-        let sector = offset as u64 / 512;
+        let sector = offset / 512;
         let request = Box::new(BlockRequest::new(buffer, sector, write));
         let header_desc = Descriptor {
             addr: &*request as *const _ as u64,
@@ -177,7 +216,7 @@ impl BlockRequest {
         }
     }
 
-    fn is_finished(&self) -> bool {
+    pub fn is_finished(&self) -> bool {
         let status;
         unsafe {
             status = read_volatile(&self.status);

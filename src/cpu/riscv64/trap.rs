@@ -102,6 +102,9 @@ extern "C" fn m_trap_handler(
                 if let Some(interrupt) = plic::next_interrupt() {
                     // Ocurrió una interrupción en el Claim register
                     match interrupt {
+                        1..=8 => {
+                            println!("VirtIO interrupt {}", interrupt);
+                        }
                         UART_INT => {
                             let uart = Uart::new(0x1000_0000);
                             read_uart(&uart);
@@ -120,6 +123,13 @@ extern "C" fn m_trap_handler(
     } else {
         // Synchronous riscv64
         match cause_num {
+            1 => {
+                // Illegal instruction
+                panic!(
+                    "Instruction access fault CPU#{} -> 0x{:08x}: 0x{:08x}\n",
+                    hart, epc, tval
+                );
+            }
             2 => {
                 // Illegal instruction
                 panic!(
