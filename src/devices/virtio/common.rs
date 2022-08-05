@@ -42,6 +42,8 @@ pub enum DeviceError {
     InvalidDevice,
     InitializationError,
     UnsupportedDevice(u32),
+    BufferError,
+    IOError,
 }
 
 /// Readonly feature

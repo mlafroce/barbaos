@@ -5,7 +5,6 @@ use crate::devices::uart_16550::Uart;
 use crate::mmu::map_table::MapTable;
 use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
-use crate::system::process;
 use crate::{kmain, mmu};
 use crate::{print, println};
 use alloc::boxed::Box;
@@ -30,7 +29,7 @@ unsafe extern "C" fn supervisor_mode_init() -> ! {
     // armamos el estado "previo" que es el que sret va a restaurar
     let status = (0b11 << 11) | (1 << 7) | (1 << 5);
     // Habilito las interrupciones en modo Supervisor
-    let interrupts = 0xa0a;
+    let interrupts = 0xaaa;
     // mideleg (Machine Interrupt delegate)
     // Las interrupciones, por defecto, elevan el privilegio a nivel M
     // Delegamos las interrupciones al nivel de supervisor
@@ -116,5 +115,5 @@ pub extern "C" fn kinit() {
     };
     mmu::print_mem_info();
     println!("\x1b[1m<Finish>\x1b[0m");
-    process::init(page_table)
+    //process::init(page_table)
 }

@@ -148,7 +148,7 @@ impl PageTable {
 
     /// Devuelve la cantidad de páginas necesarias para cubrir ese rango de memoria
     pub fn pages_needed(start: usize, end: usize) -> usize {
-        (round_up(end, 12) - round_up(start, 12)) / PAGE_SIZE + 1
+        (round_up(end, 12) - round_down(start, 12)) / PAGE_SIZE + 1
     }
 
     /// Devuelve la cantidad de páginas correspondientes al heap
@@ -229,6 +229,11 @@ impl Page {
     pub fn clear(&mut self) {
         self.bits = PageBits::Empty.val();
     }
+}
+
+fn round_down(val: usize, order: usize) -> usize {
+    let mask = (1usize << order) - 1;
+    val & !mask
 }
 
 fn round_up(val: usize, order: usize) -> usize {
