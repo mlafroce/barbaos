@@ -20,8 +20,10 @@
 extern crate alloc;
 
 mod assembly;
+mod boot;
 mod cpu;
 mod devices;
+mod filesystem;
 mod init;
 mod mmu;
 mod system;
@@ -33,7 +35,7 @@ mod utils;
 use core::ptr::null;
 use devices::shutdown;
 
-use crate::devices::virtio::block_device::test_disk;
+use crate::boot::load_disk;
 use devices::virtio::probe;
 use init::KMAP_TABLE;
 
@@ -65,7 +67,7 @@ extern "C" fn kmain() {
     }
     let mut devices = probe();
     if let Some(disk) = devices.iter_mut().flatten().next() {
-        test_disk(disk, 13);
+        load_disk(disk).expect("Failed to read disk");
     }
     println!("Press any key...");
     unsafe {

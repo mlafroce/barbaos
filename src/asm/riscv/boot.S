@@ -1,6 +1,6 @@
 .option norvc // Deshabilita compresión de instrucciones
 
-.equ KERNEL_STACK_SIZE, 0x80000
+.equ KERNEL_STACK_SIZE, 0x100000
 
 .section .data
 
