@@ -10,5 +10,12 @@ use core::arch::global_asm;
 // This came from the Rust book documenting global_asm!.
 // They show using include_str! with it to
 // import a full assembly file, which is what I want here.
-global_asm!(include_str!("asm/boot.S"));
-global_asm!(include_str!("asm/trap.S"));
+
+#[cfg(target_arch = "riscv64")]
+global_asm!(include_str!("asm/riscv/boot.S"));
+#[cfg(target_arch = "riscv64")]
+global_asm!(include_str!("asm/riscv/trap.S"));
+#[cfg(target_arch = "arm")]
+global_asm!(include_str!("asm/armv7a/boot.S"));
+#[cfg(target_arch = "arm")]
+global_asm!(include_str!("asm/armv7a/trap.S"));
