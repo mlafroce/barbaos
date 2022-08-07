@@ -14,11 +14,12 @@ pub mod utils;
 
 use devices::shutdown;
 use devices::uart_16550::Uart;
+use devices::UART_ADDRESS;
 
 #[no_mangle]
 extern "C" fn kmain() {
     // Inicializo con la dirección de memoria que configuré en virt.lds
-    let uart = Uart::new(0x1000_0000);
+    let uart = Uart::new(UART_ADDRESS);
     uart.init();
     println!("Hello Rust!");
     shutdown();
