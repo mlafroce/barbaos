@@ -1,4 +1,4 @@
-#[cfg(any(target_arch = "arm", target_arch = "armv7a"))]
+#[cfg(target_arch = "arm")]
 use crate::assembly::armv7a::wfi;
 #[cfg(target_arch = "riscv64")]
 use crate::assembly::riscv64::wfi;

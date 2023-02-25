@@ -108,10 +108,7 @@ impl DtbReader {
             .nth(1);
         if let Some(FdtNode::PropNode(_, data, size)) = node {
             let data = unsafe {
-                core::slice::from_raw_parts(
-                    data as *const usize,
-                    size / core::mem::size_of::<usize>(),
-                )
+                core::slice::from_raw_parts(data as *const usize, size / size_of::<usize>())
             };
             println!("Memory start: 0x{:x}", data[0].to_be());
             println!("Memory size : 0x{:x}", data[1].to_be());
