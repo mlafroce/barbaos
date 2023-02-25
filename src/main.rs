@@ -18,7 +18,7 @@ mod utils;
 use core::ptr::null;
 use devices::dtb::DtbReader;
 use devices::shutdown;
-use devices::uart_16550::Uart;
+use devices::Uart;
 use devices::UART_ADDRESS;
 
 static mut DTB_ADDRESS: *const u8 = null();

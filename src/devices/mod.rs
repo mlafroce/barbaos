@@ -1,12 +1,18 @@
 pub mod dtb;
+#[cfg(target_arch = "arm")]
+#[allow(dead_code)]
+pub mod mini_uart;
+#[cfg(target_arch = "riscv64")]
 pub mod uart_16550;
-#[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
+#[cfg(target_arch = "arm")]
 pub use raspi2b::*;
 #[cfg(target_arch = "riscv64")]
 pub use riscv::*;
 
 #[cfg(target_arch = "riscv64")]
 pub mod riscv {
+    pub use super::uart_16550::*;
+
     pub const UART_ADDRESS: usize = 0x1000_0000;
 
     pub fn shutdown() {
@@ -19,6 +25,8 @@ pub mod riscv {
 /// https://github.com/intel/idxd-driver/blob/master/drivers/watchdog/bcm2835_wdt.c
 #[cfg(any(target_arch = "arm", target_arch = "aarch64"))]
 pub mod raspi2b {
+    pub use super::mini_uart::*;
+
     pub const UART_ADDRESS: usize = 0x3f20_1000;
     const WATCHDOG_ADDRESS: usize = 0x3f10_0000;
     const PM_RSTC: usize = 0x1C;
