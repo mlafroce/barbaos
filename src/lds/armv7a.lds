@@ -9,6 +9,7 @@ SECTIONS
     __text_start = .;
     .text :
     {
+        *(.evec)
         KEEP(*(.text.init))
         *(.text)
     }
@@ -31,9 +32,11 @@ SECTIONS
     . = ALIGN(4096); /* align to page size */
     __data_end = .;
 
-    __bss_start = .;
     .bss :
     {
+        _irq_stack = .;
+        . = . + 4096;
+        __bss_start = .;
         bss = .;
         *(.bss)
     }
