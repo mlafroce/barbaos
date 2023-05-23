@@ -1,6 +1,5 @@
 use crate::assembly::riscv64::mscratch_write;
-use crate::mmu::riscv64::PAGE_SIZE;
-use crate::mmu::{MTIMECMP_ADDRESS, MTIME_ADDRESS};
+use crate::mmu::riscv64::{MTIMECMP_ADDRESS, MTIME_ADDRESS, PAGE_SIZE};
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::ptr::null_mut;

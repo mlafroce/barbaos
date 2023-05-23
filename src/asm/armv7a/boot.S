@@ -42,11 +42,25 @@ _start:
 	cmp r4, r9
 	blo 1b
 
+    ldr	r4, = _exc_vector
+    mcr	p15, 0, r4, c12, c0, 0	// Secure or Non-secure VBAR
+    mcr	p15, 0, r4, c12, c0, 1	// Monitor Vector Base Address Register
+
+    mrs	r4, spsr
+    bic	r5, r4, #0x0000001f
+    // Setup the stack IRQ mode.
+    orr	r5, r5, #0x12
+    msr	cpsr_c, r5
+    ldr	sp, =_irq_stack+4096
+
+    // Return to the original mode.
+    msr cpsr_c, r4
+
 	// Call machine_init
 	ldr r3, =machine_init
 	blx r3
 
 	// halt
 halt:
-	wfe
+	wfi
 	b halt

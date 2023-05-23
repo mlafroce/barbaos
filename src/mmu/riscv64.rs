@@ -4,6 +4,9 @@ use core::cell::UnsafeCell;
 use core::ptr::{null_mut, NonNull};
 use core::slice::from_raw_parts_mut;
 
+pub const MTIME_ADDRESS: usize = 0x0200_bff8;
+pub const MTIMECMP_ADDRESS: usize = 0x0200_4000;
+
 const PAGE_ORDER: usize = 12;
 
 pub const PAGE_SIZE: usize = 1 << PAGE_ORDER;
@@ -144,6 +147,7 @@ impl PageTable {
         }
     }
 
+    #[allow(dead_code)]
     pub fn print_allocations(&self) {
         unsafe {
             let num_pages = self.heap_size / (PAGE_SIZE + 1);
