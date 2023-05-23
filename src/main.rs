@@ -24,7 +24,6 @@ mod utils;
 use crate::devices::dtb::DtbReader;
 use crate::devices::UART_ADDRESS;
 use crate::devices::{shutdown, Uart};
-use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 use crate::mmu::{HEAP_SIZE, HEAP_START};
 use core::ptr::null;
 use core::sync::atomic::Ordering;
@@ -35,6 +34,7 @@ static mut DTB_ADDRESS: *const u8 = null();
 #[no_mangle]
 extern "C" fn kinit() {
     use crate::cpu::riscv64::trap::TrapFrame;
+    use crate::mmu::riscv64::{PageTable, GLOBAL_PAGE_TABLE};
 
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(UART_ADDRESS);
@@ -81,6 +81,8 @@ extern "C" fn kmain() {
 #[cfg(target_arch = "arm")]
 #[no_mangle]
 extern "C" fn kmain() {
+    use crate::assembly::armv7a::wfi;
+    use crate::assembly::armv7a::{enable_interrupts, init_timer, irq_init, queue_timer};
     // Inicializo con la dirección de memoria que configuré en virt.lds
     let uart = Uart::new(UART_ADDRESS);
     uart.init();
@@ -93,17 +95,19 @@ extern "C" fn kmain() {
     let heap_start = unsafe { HEAP_START };
     let heap_size = heap_end - heap_start;
     unsafe { HEAP_SIZE.store(heap_size, Ordering::Relaxed) };
-    // TODO: read addresses from dtb
-    let mut page_table = PageTable::new(heap_start, heap_size);
-    page_table.init();
-    unsafe { GLOBAL_PAGE_TABLE.set_root(&page_table) };
     #[cfg(test)]
     test_main();
     mmu::print_mem_info();
-    page_table.print_allocations();
-    if let Some(page) = page_table.alloc(1) {
-        println!("Page allocated: {:?}", page);
-        page_table.dealloc(page);
+    unsafe {
+        println!("Setting timer...");
+        irq_init();
+        println!("Enable interrupts");
+        enable_interrupts();
+        init_timer();
+        queue_timer();
+        println!("Waiting interrupt...");
+        wfi();
     }
+    println!("Exit");
     shutdown();
 }
