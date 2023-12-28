@@ -1,5 +1,6 @@
 use crate::devices::virtio::block_device::BlockDevice;
 use crate::{print, println};
+use core::cell::RefCell;
 
 const MMIO_VIRTIO_START: usize = 0x1000_1000;
 const MMIO_VIRTIO_DEVICES: usize = 8;
@@ -146,7 +147,7 @@ impl DeviceBuilder {
 }
 
 /// Sondeo de dispositivos en la memoria Virtio
-pub fn probe() -> [Option<BlockDevice>; 8] {
+pub fn probe() -> [Option<RefCell<BlockDevice>>; 8] {
     let mut devices = [None, None, None, None, None, None, None, None];
     #[allow(clippy::needless_range_loop)]
     for i in 0..MMIO_VIRTIO_DEVICES {
@@ -155,7 +156,7 @@ pub fn probe() -> [Option<BlockDevice>; 8] {
         if let Ok(device) = builder.init_driver() {
             println!("VirtIO device found at 0x{:x}", address);
             println!("Device type: {}", device.get_id());
-            devices[i] = Some(device);
+            devices[i] = Some(RefCell::new(device));
         }
     }
     devices

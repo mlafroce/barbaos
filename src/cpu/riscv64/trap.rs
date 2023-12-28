@@ -102,9 +102,7 @@ extern "C" fn m_trap_handler(
                 if let Some(interrupt) = plic::next_interrupt() {
                     // Ocurrió una interrupción en el Claim register
                     match interrupt {
-                        1..=8 => {
-                            println!("VirtIO interrupt {}", interrupt);
-                        }
+                        1..=8 => {}
                         UART_INT => {
                             let uart = Uart::new(0x1000_0000);
                             read_uart(&uart);
