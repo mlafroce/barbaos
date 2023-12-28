@@ -65,8 +65,8 @@ extern "C" fn kmain() {
         let table_ptr = &*(KMAP_TABLE);
         println!("map_table_page: {:p}", table_ptr);
     }
-    let mut devices = probe();
-    if let Some(disk) = devices.iter_mut().flatten().next() {
+    let devices = probe();
+    if let Some(disk) = devices.iter().flatten().next() {
         load_disk(disk).expect("Failed to read disk");
     }
     println!("Press any key...");
