@@ -62,19 +62,28 @@ int _read(int file, char *ptr, int len) {
 caddr_t _sbrk(int incr) {
     caddr_t stack_ptr = &incr;
     extern char _end;		/* Defined by the linker */
-    static char *heap_end;
-    char *prev_heap_end;
 
-    if (heap_end == 0) {
-        heap_end = &_end;
-    }
-    prev_heap_end = heap_end;
+    static char *heap_limit;
+    static char *heap_end = &_end;
+    char *prev_heap_end = heap_end;
+    int end_i = (int) heap_end;
     if (heap_end + incr > stack_ptr) {
         write(1, "Heap and stack collision\n", 25);
     }
 
+    if (heap_limit == 0) {
+        _init_heap(&heap_limit);
+    }
+    if (heap_end + incr > heap_limit) {
+        return -1;
+    }
+
     heap_end += incr;
     return (caddr_t) prev_heap_end;
+}
+
+void _init_heap(char** heap_limit) {
+    call_arg_1(SYS_BRK, heap_limit);
 }
 
 int _stat(const char *file, struct stat *st) {

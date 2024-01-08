@@ -2,8 +2,8 @@ ARCH=riscv64-unknown-elf
 CC=$(ARCH)-gcc
 NEWLIB_ROOT=$(HOME)/misc/osdev/newlib/newlib-cygwin
 NEWLIB_INCLUDE=$(NEWLIB_ROOT)/newlib/libc/include
-NEWLIB_LIBRARIES=$(NEWLIB_ROOT)/riscv64-unknown-elf/rv64imafdc/lp64d/newlib
-LIBGLOSS_LIBRARIES=$(NEWLIB_ROOT)/riscv64-unknown-elf/rv64imafdc/lp64d/libgloss/riscv
+NEWLIB_LIBRARIES=$(NEWLIB_ROOT)/build/riscv64-unknown-elf/rv64imafdc/lp64d/newlib
+LIBGLOSS_LIBRARIES=$(NEWLIB_ROOT)/build/riscv64-unknown-elf/rv64imafdc/lp64d/libgloss/riscv
 
 all: hello hello-newlib
 

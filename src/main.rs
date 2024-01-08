@@ -13,7 +13,8 @@
     custom_test_frameworks,
     allocator_api,
     adt_const_params,
-    generic_const_exprs
+    generic_const_exprs,
+    non_null_convenience
 )]
 #![test_runner(crate::test::test_runner)]
 #![reexport_test_harness_main = "test_main"]

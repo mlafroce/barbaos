@@ -2,10 +2,11 @@ use crate::mmu::map_table::EntryBits;
 use crate::mmu::riscv64::{PageTable, PAGE_ORDER, PAGE_SIZE};
 use crate::system::process::Process;
 use crate::utils::NullTerminatedStr;
+use crate::{print, println};
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
-use core::ptr::copy_nonoverlapping;
+use core::ptr::{copy_nonoverlapping, NonNull};
 
 const MAGIC_SIZE: usize = 4;
 const ENTRY_ADDR_OFFSET: u64 = 24;
@@ -82,6 +83,7 @@ impl ElfLoader {
     }
 
     pub fn into_process(self, parent_page_table: &PageTable) -> Option<Box<Process>> {
+        println!("Loading elf...");
         let mut process = Process::create(parent_page_table);
         let mut memory_sections = self
             .get_section_iterator()
@@ -130,7 +132,11 @@ impl ElfLoader {
             }
             current_page += section_pages as isize - 1;
         }
+        let heap_init =
+            unsafe { NonNull::new_unchecked(((last_end_page + 1) << PAGE_ORDER) as *mut u8) };
+        process.init_heap(heap_init).ok()?;
         process.program_counter = self.header.entry as usize;
+        process.section_pages = Some(pages);
         Some(process)
     }
 
