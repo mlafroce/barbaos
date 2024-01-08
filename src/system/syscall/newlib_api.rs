@@ -76,13 +76,6 @@ pub extern "C" fn _read(file: isize, ptr: *mut u8, len: isize) -> isize {
 
 #[no_mangle]
 pub extern "C" fn _sbrk(incr: isize) -> usize {
-    let msg = "sbrk";
-    let write_syscall = Syscall::Write {
-        fd: 0,
-        buf: msg.as_ptr(),
-        n_bytes: msg.len(),
-    };
-    write_syscall.call();
     let heap_start = unsafe { &end } as *const _ as *const u8;
     let mut heap_end = unsafe { HEAP_END };
     if heap_end == 0 {

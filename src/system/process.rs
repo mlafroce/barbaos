@@ -7,10 +7,13 @@ use crate::init::user_mode_init;
 use crate::mmu::map_table::{EntryBits, MapTable};
 use crate::mmu::riscv64::{PageTable, PAGE_SIZE};
 use crate::system::proto::elf_loader::ElfLoader;
+use crate::utils::error::OsError;
 use crate::{print, println};
 use alloc::boxed::Box;
 use core::mem::MaybeUninit;
 use core::ptr::NonNull;
+
+const PROC_HEAP_PAGES: usize = 8;
 
 /// # Estados del proceso
 /// Enumerado con los estados básicos en los que puede estar un proceso.
@@ -40,7 +43,9 @@ pub struct Process<'a> {
     pid: u16,
     pub root: *mut MapTable<'a>,
     state: ProcessState,
-    parent_page_table: &'a PageTable,
+    pub parent_page_table: &'a PageTable,
+    pub section_pages: Option<NonNull<u8>>, // TODO: could be a plain NonNull instead
+    pub heap_init: Option<NonNull<u8>>,
 }
 
 /// El registro *sp* es el *x2*
@@ -64,6 +69,8 @@ impl<'a> Process<'a> {
             root,
             state: ProcessState::Waiting,
             parent_page_table: page_table,
+            section_pages: None,
+            heap_init: None,
         }
     }
     /// Crea un proceso nuevo, que ejecuta la función que le pasamos por
@@ -102,8 +109,33 @@ impl<'a> Process<'a> {
     }
 
     pub fn map_memory(&self, vaddr: usize, paddr: usize, bits: i64, level: usize) {
-        let root_table = unsafe { &mut *self.root };
-        root_table.map(vaddr, paddr, bits, level);
+        let map_table = unsafe { &mut *self.root };
+        map_table.map(vaddr, paddr, bits, level);
+    }
+
+    pub fn init_heap(&mut self, start_address: NonNull<u8>) -> Result<(), OsError> {
+        if let Some(ptr) = self.parent_page_table.alloc(PROC_HEAP_PAGES) {
+            self.heap_init = Some(ptr);
+            for i in 0..PROC_HEAP_PAGES {
+                let addr = i * PAGE_SIZE;
+                unsafe {
+                    println!(
+                        "Mapping {:?} to {:?}",
+                        start_address.add(addr),
+                        ptr.add(addr).as_ptr()
+                    )
+                };
+                self.map_memory(
+                    unsafe { start_address.add(addr).as_ptr() } as usize,
+                    unsafe { ptr.add(addr).as_ptr() } as usize,
+                    EntryBits::UserReadWrite.val(),
+                    0,
+                );
+            }
+            Ok(())
+        } else {
+            Err(OsError::NoMem)
+        }
     }
 }
 

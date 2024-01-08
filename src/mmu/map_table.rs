@@ -136,13 +136,11 @@ impl<'a> MapTable<'a> {
     }
 
     /// Elimina mapeos creados con la función `map`.
-    #[allow(dead_code)]
     pub fn unmap(&mut self) {
         MapTable::unmap_entries(self.page_table, &mut self.entries);
     }
 
     /// Version recursiva
-    #[allow(dead_code)]
     fn unmap_entries(page_table: &PageTable, entries: &mut [Entry]) {
         for cur_entry in entries {
             if cur_entry.is_valid() && !cur_entry.is_leaf() {

@@ -7,6 +7,10 @@ int main() {
     return 0;
 }
 
+void call_arg_1(uintptr_t syscall_id, uintptr_t arg0) {
+    call_syscall(syscall_id, arg0);
+}
+
 void call_arg_2(uintptr_t syscall_id, uintptr_t arg0, uintptr_t arg1) {
     call_syscall(syscall_id, arg0, arg1);
 }
