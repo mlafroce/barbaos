@@ -1,6 +1,7 @@
 use crate::devices::virtio::block_device::BlockDevice;
+use crate::devices::DeviceId;
 use crate::{print, println};
-use core::cell::RefCell;
+use core::cell::{RefCell, UnsafeCell};
 
 const MMIO_VIRTIO_START: usize = 0x1000_1000;
 const MMIO_VIRTIO_DEVICES: usize = 8;
@@ -40,12 +41,15 @@ pub enum VirtioDeviceStatus {
 
 #[derive(Debug)]
 pub enum DeviceError {
+    EntryNotFound,
     InvalidDevice,
     InitializationError,
     UnsupportedDevice(u32),
     BufferError,
     IOError,
 }
+
+pub const BLOCK_DEVICE_ID: u32 = 2;
 
 /// Readonly feature
 pub const VIRTIO_BLK_F_RO: u32 = 0x20;
@@ -140,24 +144,56 @@ impl DeviceBuilder {
         );
         let device_id = self.address.read_register(VirtioMmioRegister::DeviceId);
         match device_id {
-            2 => BlockDevice::new(self.address),
+            BLOCK_DEVICE_ID => BlockDevice::new(self.address),
             _ => Err(DeviceError::UnsupportedDevice(device_id)),
         }
     }
 }
 
-/// Sondeo de dispositivos en la memoria Virtio
-pub fn probe() -> [Option<RefCell<BlockDevice>>; 8] {
-    let mut devices = [None, None, None, None, None, None, None, None];
-    #[allow(clippy::needless_range_loop)]
-    for i in 0..MMIO_VIRTIO_DEVICES {
-        let address = MMIO_VIRTIO_START + i * MMIO_VIRTIO_STRIDE;
-        let builder = DeviceBuilder::new(address);
-        if let Ok(device) = builder.init_driver() {
-            println!("VirtIO device found at 0x{:x}", address);
-            println!("Device type: {}", device.get_id());
-            devices[i] = Some(RefCell::new(device));
+struct DeviceList {
+    devices: [Option<RefCell<BlockDevice>>; 8],
+}
+
+pub struct DeviceManager {
+    device_list: UnsafeCell<DeviceList>,
+}
+
+unsafe impl Sync for DeviceManager {}
+
+static DEVICE_MANAGER: DeviceManager = DeviceManager::empty();
+
+impl DeviceManager {
+    const fn empty() -> Self {
+        let device_list = DeviceList {
+            devices: [None, None, None, None, None, None, None, None],
+        };
+        let device_list = UnsafeCell::new(device_list);
+        Self { device_list }
+    }
+
+    /// Sondeo de dispositivos en la memoria Virtio
+    pub fn init() {
+        let mut devices = [None, None, None, None, None, None, None, None];
+        #[allow(clippy::needless_range_loop)]
+        for i in 0..MMIO_VIRTIO_DEVICES {
+            let address = MMIO_VIRTIO_START + i * MMIO_VIRTIO_STRIDE;
+            let builder = DeviceBuilder::new(address);
+            if let Ok(device) = builder.init_driver() {
+                println!("VirtIO device found at 0x{:x}", address);
+                println!("Device type: {}", device.get_id());
+                devices[i] = Some(RefCell::new(device));
+            }
+        }
+        let list = DEVICE_MANAGER.device_list.get();
+        unsafe {
+            (*list).devices = devices;
         }
     }
-    devices
+
+    /// TODO: How do I identify my devices?
+    pub fn get_device(_device: DeviceId) -> Option<&'static RefCell<BlockDevice>> {
+        let mgr = unsafe { &*DEVICE_MANAGER.device_list.get() };
+        let device = mgr.devices.iter().flatten().next();
+        device
+    }
 }

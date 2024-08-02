@@ -32,11 +32,13 @@ mod system;
 mod test;
 mod utils;
 
+use alloc::string::ToString;
 use core::ptr::null;
 use devices::shutdown;
 
-use crate::boot::load_disk;
-use devices::virtio::probe;
+use crate::devices::virtio::common::DeviceManager;
+use crate::filesystem::virtual_fs::FilesystemType::Ext3;
+use crate::filesystem::virtual_fs::{MountPoint, VirtualFsManager};
 use init::KMAP_TABLE;
 
 static mut DTB_ADDRESS: *const u8 = null();
@@ -64,10 +66,18 @@ extern "C" fn kmain() {
     unsafe {
         let table_ptr = &*(KMAP_TABLE);
         println!("map_table_page: {:p}", table_ptr);
-    }
-    let devices = probe();
-    if let Some(disk) = devices.iter().flatten().next() {
-        load_disk(disk).expect("Failed to read disk");
+        DeviceManager::init();
+        VirtualFsManager::init();
+        let mount_point = MountPoint {
+            path: "/".to_string(),
+            fs_type: Ext3 {
+                device_id: 0,
+                partition_id: 0,
+            },
+        };
+        VirtualFsManager::push_mount_point(mount_point);
+        let fd = VirtualFsManager::open("/boot/hello.md");
+        println!("Fd: {:?}", fd);
     }
     println!("Press any key...");
     unsafe {
