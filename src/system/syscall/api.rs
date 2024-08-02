@@ -5,6 +5,8 @@ pub const REBOOT_MAGIC_2: usize = 0xCACAFEAA;
 
 pub const SYS_WRITE: usize = 1;
 pub const SYS_REBOOT: usize = 48;
+pub const SYS_PUSHMSGBOX: usize = 500;
+pub const SYS_POPMSGBOX: usize = 501;
 
 /// Esta macro recibe un id de syscall y una cantidad variable de argumentos
 /// luego llama a call_arg_n según la cantidad que posee

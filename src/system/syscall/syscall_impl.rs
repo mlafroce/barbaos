@@ -1,18 +1,18 @@
 use crate::cpu::riscv64::trap::TrapFrame;
 use crate::devices::shutdown;
+use crate::print;
 use crate::system::process::InitProcess;
 use crate::system::syscall;
 use crate::system::syscall::{REBOOT_MAGIC_1, REBOOT_MAGIC_2};
-use crate::{print, println};
 
+const ARG_CODE: usize = 10;
 const ARG_1: usize = 11;
 const ARG_2: usize = 12;
 const ARG_3: usize = 13;
 
 /// Ejecuta las distintas syscalls y almacena los datos en el frame del llamador
 pub fn execute_syscall(frame: &mut TrapFrame, _epc: usize) {
-    let code = frame.regs[10];
-    println!("Code: {:x}", code);
+    let code = frame.regs[ARG_CODE];
     match code {
         syscall::SYS_WRITE => {
             let buf_virt_ptr = frame.regs[ARG_2];
@@ -30,6 +30,7 @@ pub fn execute_syscall(frame: &mut TrapFrame, _epc: usize) {
                 shutdown();
             }
         }
+        syscall::SYS_POPMSGBOX => {}
         _ => {
             unimplemented!()
         }

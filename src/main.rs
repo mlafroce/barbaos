@@ -36,8 +36,7 @@ use core::ptr::null;
 use devices::shutdown;
 
 use crate::boot::load_disk;
-use devices::virtio::probe;
-use init::KMAP_TABLE;
+use crate::devices::virtio::common::DeviceManager;
 
 static mut DTB_ADDRESS: *const u8 = null();
 
@@ -61,14 +60,8 @@ extern "C" fn kmain() {
         plic::enable(i);
         plic::set_priority(i, 1);
     }
-    unsafe {
-        let table_ptr = &*(KMAP_TABLE);
-        println!("map_table_page: {:p}", table_ptr);
-    }
-    let devices = probe();
-    if let Some(disk) = devices.iter().flatten().next() {
-        load_disk(disk).expect("Failed to read disk");
-    }
+    DeviceManager::init();
+    load_disk().unwrap();
     println!("Press any key...");
     unsafe {
         wfi();

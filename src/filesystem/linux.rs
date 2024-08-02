@@ -265,7 +265,7 @@ pub struct DirectoryEntry {
     file_type: Ext2Filetype,
 }
 impl DataBlock {
-    pub fn iter_directories(&self) -> DirectoryIterator {
+    pub fn iter_directories(&self) -> DirectoryIterator<'_> {
         DirectoryIterator {
             block: self,
             offset: 0,

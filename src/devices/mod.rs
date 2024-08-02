@@ -19,3 +19,5 @@ pub fn shutdown() {
     let address = SIFIVE_TEST_ADDRESS as *mut u32;
     unsafe { address.write_volatile(0x5555) };
 }
+
+pub type DeviceId = u32;
